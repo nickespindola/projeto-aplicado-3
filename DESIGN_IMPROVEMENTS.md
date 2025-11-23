@@ -185,5 +185,3 @@ Este documento descreve as melhorias de design implementadas no sistema LocaTech
 - Botões: 8px
 
 ---
-
-**Desenvolvido com 💜 para LocaTech**
