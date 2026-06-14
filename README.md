@@ -267,6 +267,47 @@ Para mais detalhes sobre o sistema de autenticação e permissões, consulte:
    - Nenhum botão de ação disponível
    - Mensagem "Apenas visualização" nas tabelas
 
+## 🧪 Testes Automatizados
+
+Foram adicionados testes automatizados no backend e no frontend para validar os fluxos mais importantes de segurança e acesso:
+
+- Login com JWT
+- Validação de token
+- Controle de acesso por perfil
+- Permissão para visualizar dados
+- Bloqueio de rotas administrativas para usuários sem permissão
+- Validação do formulário de login no frontend
+
+### Como executar
+
+No diretório `backend`:
+
+```bash
+npm install
+npm test
+```
+
+### Evidências de teste
+
+Os testes cobrem os seguintes cenários:
+
+- `POST /auth/login` com sucesso
+- `POST /auth/login` com credenciais inválidas
+- `GET /auth/verify` sem token
+- `GET /clientes` com usuário autenticado
+- `GET /usuarios` com viewer bloqueado
+- `GET /usuarios` com admin autorizado
+- Renderização do formulário de login
+- Login com sucesso no frontend
+- Exibição de erro no frontend quando a autenticação falha
+
+### Dependências adicionadas para teste
+
+- `jest`
+- `supertest`
+- `react-router-dom` atualizado para a versão 6.30.1 para compatibilidade com os testes
+- `axios` ajustado para uma versão compatível com o ambiente de testes
+
 ## 📝 Próximas Melhorias
 
 - [ ] Implementar bcrypt para hash de senhas

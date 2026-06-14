@@ -732,6 +732,12 @@ app.get("/clientes/find", authenticateToken, canView, (req, res) => {
 // ==================== SERVER ====================
 
 const PORT = process.env.PORT || 8081;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.db = db;
