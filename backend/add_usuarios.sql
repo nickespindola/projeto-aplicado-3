@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS USUARIO (
 );
 
 -- Inserir usuários de teste (senha para todos: admin123)
-INSERT IGNORE INTO USUARIO (nome, email, senha, role) VALUES 
-('Administrador', 'admin@locatech.com', 'admin123', 'admin'),
-('Editor Teste', 'editor@locatech.com', 'admin123', 'editor'),
-('Visualizador', 'viewer@locatech.com', 'admin123', 'viewer');
+INSERT IGNORE INTO USUARIO (nome, email, senha, role) VALUES
+('Administrador', 'admin@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'admin'),
+('Editor Teste', 'editor@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'editor'),
+('Visualizador', 'viewer@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'viewer');

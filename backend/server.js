@@ -49,9 +49,8 @@ app.post("/auth/login", (req, res) => {
 
     const usuario = results[0];
 
-    // Por enquanto, comparação simples (depois implementar bcrypt hash)
-    // Senha padrão para todos os usuários de teste: admin123
-    if (senha !== "admin123") {
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaCorreta) {
       return res.status(401).json({ error: "Email ou senha incorretos" });
     }
 
@@ -147,7 +146,7 @@ app.post("/usuarios", authenticateToken, requireAdmin, (req, res) => {
 
   // Verificar se email já existe
   const checkEmailSql = "SELECT id FROM USUARIO WHERE email = ?";
-  db.query(checkEmailSql, [email], (err, results) => {
+  db.query(checkEmailSql, [email], async (err, results) => {
     if (err) {
       console.error("Erro ao verificar email:", err);
       return res.status(500).json({ error: "Erro do banco de dados." });
@@ -157,13 +156,13 @@ app.post("/usuarios", authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ error: "Este email já está cadastrado." });
     }
 
-    // Inserir usuário (senha em texto simples por enquanto - TODO: bcrypt)
+    const hashedSenha = await bcrypt.hash(senha, 10);
     const sql = `
-      INSERT INTO USUARIO (nome, email, senha, role, ativo) 
+      INSERT INTO USUARIO (nome, email, senha, role, ativo)
       VALUES (?, ?, ?, ?, ?)
     `;
 
-    const values = [nome, email, senha, role, ativo !== false];
+    const values = [nome, email, hashedSenha, role, ativo !== false];
 
     db.query(sql, values, (err, result) => {
       if (err) {
@@ -194,7 +193,7 @@ app.put("/usuarios/:id", authenticateToken, requireAdmin, (req, res) => {
 
   // Verificar se email já existe em outro usuário
   const checkEmailSql = "SELECT id FROM USUARIO WHERE email = ? AND id != ?";
-  db.query(checkEmailSql, [email, userId], (err, results) => {
+  db.query(checkEmailSql, [email, userId], async (err, results) => {
     if (err) {
       console.error("Erro ao verificar email:", err);
       return res.status(500).json({ error: "Erro do banco de dados." });
@@ -204,17 +203,16 @@ app.put("/usuarios/:id", authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ error: "Este email já está cadastrado em outro usuário." });
     }
 
-    // Montar SQL de atualização
     let sql, values;
 
     if (senha) {
-      // Atualizar com nova senha
+      const hashedSenha = await bcrypt.hash(senha, 10);
       sql = `
-        UPDATE USUARIO 
+        UPDATE USUARIO
         SET nome = ?, email = ?, senha = ?, role = ?, ativo = ?
         WHERE id = ?
       `;
-      values = [nome, email, senha, role, ativo !== false, userId];
+      values = [nome, email, hashedSenha, role, ativo !== false, userId];
     } else {
       // Atualizar sem alterar senha
       sql = `

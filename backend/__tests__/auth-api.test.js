@@ -16,10 +16,14 @@ jest.mock('mysql2', () => ({
 
 const app = require('../server');
 
+// Hash pré-computado de 'admin123' para uso nos mocks
+const SENHA_HASH = '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG';
+
 const adminUser = {
   id: 1,
   nome: 'Administrador',
   email: 'admin@locatech.com',
+  senha: SENHA_HASH,
   role: 'admin',
   ativo: true,
 };
