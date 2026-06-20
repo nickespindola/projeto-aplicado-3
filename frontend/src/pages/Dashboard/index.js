@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -59,6 +59,8 @@ const EmptyChart = ({ msg }) => (
 );
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     totalClientes: 0,
     totalEquipamentos: 0,
@@ -74,6 +76,23 @@ const Dashboard = () => {
     tipoEquipData: [],
     receitaData: []
   });
+
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
+
+  const handleEnviarAlertas = async () => {
+    if (!window.confirm('Enviar e-mail de alerta de vencimento para todos os clientes com contratos vencendo nos próximos 30 dias?')) return;
+    setEnviandoEmail(true);
+    setEmailResult(null);
+    try {
+      const res = await axios.post('http://localhost:8081/contratos/notificar-vencimento', { dias: 30 });
+      setEmailResult({ ok: true, ...res.data });
+    } catch (err) {
+      setEmailResult({ ok: false, error: err.response?.data?.error || err.message });
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
 
   useEffect(() => { carregarDashboard(); }, []);
 
@@ -216,7 +235,12 @@ const Dashboard = () => {
             <p>Contratos Ativos</p>
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '3px solid #d97706' }}>
+        <div
+          className="stat-card"
+          style={{ borderLeft: '3px solid #d97706', cursor: 'pointer' }}
+          onClick={() => navigate('/contratos?vencimento=30')}
+          title="Ver contratos que vencem nos próximos 30 dias"
+        >
           <div className="stat-icon" style={{ background: '#fffbeb', color: '#d97706' }}>
             <IconAlertTriangle />
           </div>
@@ -372,7 +396,32 @@ const Dashboard = () => {
                   Novo Contrato
                 </Link>
                 <Link to="/contratos" className="btn btn-outline-primary">Ver Todos os Contratos</Link>
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={handleEnviarAlertas}
+                  disabled={enviandoEmail}
+                  style={{ borderColor: '#d97706', color: '#d97706' }}
+                >
+                  {enviandoEmail ? 'Enviando...' : 'Enviar alertas de vencimento'}
+                </button>
               </div>
+
+              {emailResult && (
+                <div className={`alert mt-3 mb-0 ${emailResult.ok ? 'alert-success' : 'alert-danger'}`}>
+                  {emailResult.ok ? (
+                    emailResult.enviados === 0
+                      ? emailResult.message
+                      : <>
+                          <strong>{emailResult.enviados}</strong> e-mail(s) enviado(s) com sucesso
+                          {emailResult.erros?.length > 0 && (
+                            <span className="text-danger ms-2">· {emailResult.erros.length} falha(s)</span>
+                          )}
+                        </>
+                  ) : (
+                    <><strong>Erro:</strong> {emailResult.error}</>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -414,9 +463,18 @@ const Dashboard = () => {
                             </strong>
                           </td>
                           <td>
-                            <span className={`badge ${(contrato.status || '').toLowerCase() === 'ativo' ? 'bg-success' : 'bg-secondary'}`}>
-                              {contrato.status || 'N/A'}
-                            </span>
+                            {(() => {
+                              const s = (contrato.status || '').toLowerCase();
+                              const map = {
+                                pendente:   { cls: 'bg-warning text-dark', label: 'Pendente' },
+                                ativo:      { cls: 'bg-success',           label: 'Ativo' },
+                                finalizado: { cls: '', style: { background: '#f97316', color: '#fff' }, label: 'Aguard. devolução' },
+                                devolvido:  { cls: 'bg-secondary',         label: 'Concluído' },
+                                cancelado:  { cls: 'bg-danger',            label: 'Cancelado' },
+                              };
+                              const b = map[s] || { cls: 'bg-light text-dark', label: contrato.status || 'N/A' };
+                              return <span className={`badge ${b.cls}`} style={b.style || {}}>{b.label}</span>;
+                            })()}
                           </td>
                         </tr>
                       ))}
@@ -436,7 +494,7 @@ const Dashboard = () => {
           <div className="col-12">
             <div className="alert alert-warning" role="alert">
               <strong>Atenção!</strong> Você tem {stats.contratosProximosVencimento} contrato(s) vencendo nos próximos 30 dias.{' '}
-              <Link to="/contratos" className="alert-link">Ver contratos</Link>
+              <Link to="/contratos?vencimento=30" className="alert-link">Ver contratos</Link>
             </div>
           </div>
         </div>

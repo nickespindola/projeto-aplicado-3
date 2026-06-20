@@ -267,9 +267,18 @@ body {
 .form-select {
   border: 1.5px solid var(--border);
   border-radius: 7px;
-  padding: 0.65rem 0.875rem;
   transition: border-color 0.15s, box-shadow 0.15s;
   font-size: 0.9rem;
+}
+/* form-control não tem seta, pode ter padding uniforme */
+.form-control {
+  padding: 0.65rem 0.875rem;
+}
+/* form-select mantém padding-right maior do Bootstrap para a seta do dropdown não sobrepor o texto */
+.form-select {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  padding-left: 0.875rem;
 }
 .form-control:focus,
 .form-select:focus {
@@ -290,6 +299,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+/* Restaura o tamanho compacto do btn-sm que .btn sobrescreve por ter mesma especificidade mas carregar depois */
+.btn.btn-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  gap: 0.25rem;
 }
 
 .btn-primary {

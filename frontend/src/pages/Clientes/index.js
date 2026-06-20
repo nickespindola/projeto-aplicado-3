@@ -43,7 +43,6 @@ const IconChevronUp = () => (
   </svg>
 );
 
-// Máscara: ***.456.789-** para CPF, **.456.789/0001-** para CNPJ
 const maskCPF = (value) => {
   const n = (value || '').replace(/\D/g, '');
   if (n.length !== 11) return value || '-';
@@ -68,23 +67,37 @@ const formatDoc = (cpf, cnpj) => {
   return '-';
 };
 
+const formatEndereco = (c) => {
+  if (!c.logradouro) return c.endereco || '-';
+  const partes = [c.logradouro];
+  if (c.numero) partes[0] += `, ${c.numero}`;
+  if (c.complemento) partes.push(c.complemento);
+  if (c.bairro) partes.push(c.bairro);
+  if (c.cidade) partes.push(c.uf ? `${c.cidade}/${c.uf}` : c.cidade);
+  if (c.cep) partes.push(`CEP ${c.cep}`);
+  return partes.join(' — ');
+};
+
+const FORM_VAZIO = {
+  nome: '', cpf_cnpj: '', telefone: '', email: '', tipo_cliente: '',
+  cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: ''
+};
+
 const Clientes = ({ usuario }) => {
   const [clientes, setClientes] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: '', cpf_cnpj: '', telefone: '', email: '', endereco: '', tipo_cliente: ''
-  });
+  const [formData, setFormData] = useState(FORM_VAZIO);
 
-  // Controle de linhas expandidas e documentos revelados
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState('');
+
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [revealedDocs, setRevealedDocs] = useState(new Set());
 
-  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
 
-  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -145,10 +158,51 @@ const Clientes = ({ usuario }) => {
     return `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5, 8)}/${n.slice(8, 12)}-${n.slice(12, 14)}`;
   };
 
+  const formatCEP = (value) => {
+    const n = value.replace(/\D/g, '');
+    if (n.length <= 5) return n;
+    return `${n.slice(0, 5)}-${n.slice(5, 8)}`;
+  };
+
+  const buscarCEP = async (cepRaw) => {
+    const digits = cepRaw.replace(/\D/g, '');
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    setCepError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setCepError('CEP não encontrado.');
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        logradouro: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        uf: data.uf || '',
+      }));
+      // Foca no campo número depois do preenchimento automático
+      setTimeout(() => document.getElementById('campo-numero')?.focus(), 50);
+    } catch {
+      setCepError('Erro ao consultar o CEP. Tente novamente.');
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
+
     if (name === 'telefone') newValue = formatTelefone(value);
+    if (name === 'cep') {
+      newValue = formatCEP(value);
+      setFormData(prev => ({ ...prev, cep: newValue }));
+      if (newValue.replace(/\D/g, '').length === 8) buscarCEP(newValue);
+      return;
+    }
     if (name === 'cpf_cnpj') {
       if (formData.tipo_cliente === 'Pessoa Física') newValue = formatCPF(value);
       else if (formData.tipo_cliente === 'Pessoa Jurídica') newValue = formatCNPJ(value);
@@ -167,10 +221,19 @@ const Clientes = ({ usuario }) => {
       formData.tipo_cliente === 'Pessoa Jurídica' ? 'PJ' : formData.tipo_cliente;
     const cpfCnpjLimpo = formData.cpf_cnpj.replace(/\D/g, '');
     const dataToSend = {
-      nome: formData.nome, endereco: formData.endereco, e_mail: formData.email,
-      telefone: formData.telefone, tipo_cliente: tipoParaEnviar,
+      nome: formData.nome,
+      e_mail: formData.email,
+      telefone: formData.telefone,
+      tipo_cliente: tipoParaEnviar,
       cpf: tipoParaEnviar === 'PF' ? cpfCnpjLimpo : null,
-      cnpj: tipoParaEnviar === 'PJ' ? cpfCnpjLimpo : null
+      cnpj: tipoParaEnviar === 'PJ' ? cpfCnpjLimpo : null,
+      cep: formData.cep,
+      logradouro: formData.logradouro,
+      numero: formData.numero,
+      complemento: formData.complemento,
+      bairro: formData.bairro,
+      cidade: formData.cidade,
+      uf: formData.uf,
     };
     try {
       if (editingId) {
@@ -191,13 +254,22 @@ const Clientes = ({ usuario }) => {
   const handleEdit = async (id) => {
     try {
       const response = await axios.get(`http://localhost:8081/clientes/${id}`);
-      const cliente = response.data;
-      const tipoExibicao = cliente.tipo_cliente === 'PF' ? 'Pessoa Física' :
-        cliente.tipo_cliente === 'PJ' ? 'Pessoa Jurídica' : cliente.tipo_cliente;
+      const c = response.data;
+      const tipoExibicao = c.tipo_cliente === 'PF' ? 'Pessoa Física' :
+        c.tipo_cliente === 'PJ' ? 'Pessoa Jurídica' : c.tipo_cliente;
       setFormData({
-        nome: cliente.nome || '', cpf_cnpj: cliente.cpf || cliente.cnpj || '',
-        telefone: cliente.telefone || '', email: cliente.e_mail || '',
-        endereco: cliente.endereco || '', tipo_cliente: tipoExibicao
+        nome: c.nome || '',
+        cpf_cnpj: c.cpf || c.cnpj || '',
+        telefone: c.telefone || '',
+        email: c.e_mail || '',
+        tipo_cliente: tipoExibicao,
+        cep: c.cep || '',
+        logradouro: c.logradouro || c.endereco || '',
+        numero: c.numero || '',
+        complemento: c.complemento || '',
+        bairro: c.bairro || '',
+        cidade: c.cidade || '',
+        uf: c.uf || '',
       });
       setEditingId(id);
       setShowForm(true);
@@ -222,7 +294,8 @@ const Clientes = ({ usuario }) => {
   };
 
   const resetForm = () => {
-    setFormData({ nome: '', cpf_cnpj: '', telefone: '', email: '', endereco: '', tipo_cliente: '' });
+    setFormData(FORM_VAZIO);
+    setCepError('');
     setEditingId(null);
     setShowForm(false);
   };
@@ -251,7 +324,7 @@ const Clientes = ({ usuario }) => {
     <div className="fade-in">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="mb-1" style={{ color: '#2c3e50', fontWeight: '700' }}>Clientes</h2>
+          <h2 className="mb-1" style={{ fontWeight: '700' }}>Clientes</h2>
           <p className="text-muted mb-0">Gerencie seus clientes</p>
         </div>
         {canEdit && (
@@ -271,6 +344,8 @@ const Clientes = ({ usuario }) => {
           </div>
           <div className="card-body">
             <form onSubmit={handleSubmit}>
+
+              {/* Dados pessoais */}
               <div className="row">
                 <div className="col-md-6">
                   <div className="form-group mb-3">
@@ -291,21 +366,28 @@ const Clientes = ({ usuario }) => {
                 </div>
               </div>
               <div className="row">
-                <div className="col-md-6">
+                <div className="col-md-4">
                   <div className="form-group mb-3">
                     <label className="form-label">
                       {formData.tipo_cliente === 'Pessoa Física' ? 'CPF' : formData.tipo_cliente === 'Pessoa Jurídica' ? 'CNPJ' : 'CPF / CNPJ'}
-                      <span className="text-danger">*</span>
+                      <span className="text-danger"> *</span>
                     </label>
                     <input type="text" name="cpf_cnpj" className="form-control"
-                      placeholder={formData.tipo_cliente === 'Pessoa Física' ? '000.000.000-00' : formData.tipo_cliente === 'Pessoa Jurídica' ? '00.000.000/0000-00' : 'Selecione o tipo de cliente primeiro'}
+                      placeholder={formData.tipo_cliente === 'Pessoa Física' ? '000.000.000-00' : formData.tipo_cliente === 'Pessoa Jurídica' ? '00.000.000/0000-00' : 'Selecione o tipo primeiro'}
                       value={formData.cpf_cnpj} onChange={handleInputChange}
                       maxLength={formData.tipo_cliente === 'Pessoa Física' ? 14 : 18}
                       disabled={!formData.tipo_cliente} required />
                     {!formData.tipo_cliente && <small className="text-warning">Selecione o tipo de cliente primeiro</small>}
                   </div>
                 </div>
-                <div className="col-md-6">
+                <div className="col-md-4">
+                  <div className="form-group mb-3">
+                    <label className="form-label">Telefone <span className="text-danger">*</span></label>
+                    <input type="text" name="telefone" className="form-control" placeholder="(00) 00000-0000"
+                      value={formData.telefone} onChange={handleInputChange} maxLength={15} required />
+                  </div>
+                </div>
+                <div className="col-md-4">
                   <div className="form-group mb-3">
                     <label className="form-label">E-mail <span className="text-danger">*</span></label>
                     <input type="email" name="email" className="form-control" placeholder="cliente@email.com"
@@ -313,22 +395,140 @@ const Clientes = ({ usuario }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Endereço */}
+              <hr className="my-3" />
+              <p className="form-label mb-3" style={{ fontWeight: 700, color: 'var(--text)' }}>Endereço</p>
+
               <div className="row">
-                <div className="col-md-6">
+                {/* CEP */}
+                <div className="col-md-3">
                   <div className="form-group mb-3">
-                    <label className="form-label">Telefone <span className="text-danger">*</span></label>
-                    <input type="text" name="telefone" className="form-control" placeholder="(00) 00000-0000"
-                      value={formData.telefone} onChange={handleInputChange} maxLength={15} required />
+                    <label className="form-label">CEP <span className="text-danger">*</span></label>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        name="cep"
+                        className={`form-control ${cepError ? 'is-invalid' : ''}`}
+                        placeholder="00000-000"
+                        value={formData.cep}
+                        onChange={handleInputChange}
+                        maxLength={9}
+                        required
+                      />
+                      {cepLoading && (
+                        <span className="input-group-text">
+                          <span className="spinner-border spinner-border-sm" role="status" />
+                        </span>
+                      )}
+                    </div>
+                    {cepError && <div className="invalid-feedback d-block">{cepError}</div>}
+                    <small className="text-muted">Preenchimento automático ao digitar</small>
                   </div>
                 </div>
-                <div className="col-md-6">
+
+                {/* Número */}
+                <div className="col-md-2">
                   <div className="form-group mb-3">
-                    <label className="form-label">Endereço Completo <span className="text-danger">*</span></label>
-                    <input type="text" name="endereco" className="form-control" placeholder="Rua, número, bairro, cidade - UF"
-                      value={formData.endereco} onChange={handleInputChange} required />
+                    <label className="form-label">Número <span className="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      id="campo-numero"
+                      name="numero"
+                      className="form-control"
+                      placeholder="Ex: 123"
+                      value={formData.numero}
+                      onChange={handleInputChange}
+                      maxLength={20}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Complemento */}
+                <div className="col-md-4">
+                  <div className="form-group mb-3">
+                    <label className="form-label">Complemento</label>
+                    <input
+                      type="text"
+                      name="complemento"
+                      className="form-control"
+                      placeholder="Apto, sala, bloco..."
+                      value={formData.complemento}
+                      onChange={handleInputChange}
+                      maxLength={100}
+                    />
+                  </div>
+                </div>
+
+                {/* UF */}
+                <div className="col-md-3">
+                  <div className="form-group mb-3">
+                    <label className="form-label">UF</label>
+                    <input
+                      type="text"
+                      name="uf"
+                      className="form-control"
+                      placeholder="SP"
+                      value={formData.uf}
+                      onChange={handleInputChange}
+                      maxLength={2}
+                      style={{ textTransform: 'uppercase' }}
+                    />
                   </div>
                 </div>
               </div>
+
+              <div className="row">
+                {/* Logradouro */}
+                <div className="col-md-5">
+                  <div className="form-group mb-3">
+                    <label className="form-label">Logradouro (Rua / Av.) <span className="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      name="logradouro"
+                      className="form-control"
+                      placeholder="Preenchido automaticamente pelo CEP"
+                      value={formData.logradouro}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Bairro */}
+                <div className="col-md-4">
+                  <div className="form-group mb-3">
+                    <label className="form-label">Bairro</label>
+                    <input
+                      type="text"
+                      name="bairro"
+                      className="form-control"
+                      placeholder="Preenchido automaticamente"
+                      value={formData.bairro}
+                      onChange={handleInputChange}
+                      maxLength={100}
+                    />
+                  </div>
+                </div>
+
+                {/* Cidade */}
+                <div className="col-md-3">
+                  <div className="form-group mb-3">
+                    <label className="form-label">Cidade</label>
+                    <input
+                      type="text"
+                      name="cidade"
+                      className="form-control"
+                      placeholder="Preenchido automaticamente"
+                      value={formData.cidade}
+                      onChange={handleInputChange}
+                      maxLength={100}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="d-flex justify-content-end gap-2">
                 <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Cancelar</button>
                 <button type="submit" className="btn btn-success">{editingId ? 'Salvar Alterações' : 'Cadastrar Cliente'}</button>
@@ -405,10 +605,7 @@ const Clientes = ({ usuario }) => {
 
                       return (
                         <React.Fragment key={cliente.id}>
-                          <tr
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => toggleExpand(cliente.id)}
-                          >
+                          <tr style={{ cursor: 'pointer' }} onClick={() => toggleExpand(cliente.id)}>
                             <td className="text-muted" style={{ verticalAlign: 'middle' }}>
                               {isExpanded ? <IconChevronUp /> : <IconChevronDown />}
                             </td>
@@ -472,9 +669,9 @@ const Clientes = ({ usuario }) => {
                                     <span className="text-muted d-block" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>E-mail</span>
                                     <span>{cliente.e_mail || '-'}</span>
                                   </div>
-                                  <div>
+                                  <div style={{ flex: 1, minWidth: '200px' }}>
                                     <span className="text-muted d-block" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Endereço</span>
-                                    <span>{cliente.endereco || '-'}</span>
+                                    <span>{formatEndereco(cliente)}</span>
                                   </div>
                                 </div>
                               </td>

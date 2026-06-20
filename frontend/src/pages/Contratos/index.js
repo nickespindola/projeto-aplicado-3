@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../components/Pagination';
@@ -122,13 +123,15 @@ const EquipamentoSelector = ({ value, onChange, equipamentos, emUsoIds }) => {
 };
 
 const Contratos = ({ usuario }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [contratos, setContratos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [equipamentos, setEquipamentos] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    cliente_id: '', equipamento_id: '', data_inicio: '', data_fim: '', valor_mensal: ''
+    cliente_id: '', equipamento_id: '', data_inicio: '', data_fim: '', valor_mensal: '', status: ''
   });
 
   // Filtros
@@ -136,10 +139,33 @@ const Contratos = ({ usuario }) => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDataDe, setFilterDataDe] = useState('');
   const [filterDataAte, setFilterDataAte] = useState('');
+  // Filtro "vence em N dias" vindo do Dashboard via ?vencimento=30
+  const [filterVencimento, setFilterVencimento] = useState(() => {
+    const v = parseInt(searchParams.get('vencimento'));
+    return isNaN(v) ? 0 : v;
+  });
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // E-mail de alertas
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
+
+  const handleEnviarAlertas = async () => {
+    if (!window.confirm('Enviar e-mail de alerta para todos os clientes com contratos ativos vencendo nos próximos 30 dias?')) return;
+    setEnviandoEmail(true);
+    setEmailResult(null);
+    try {
+      const res = await axios.post('http://localhost:8081/contratos/notificar-vencimento', { dias: 30 });
+      setEmailResult({ ok: true, ...res.data });
+    } catch (err) {
+      setEmailResult({ ok: false, error: err.response?.data?.error || err.message });
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
 
   const canEdit = usuario && (usuario.role === 'admin' || usuario.role === 'editor');
   const canDelete = usuario && usuario.role === 'admin';
@@ -150,7 +176,7 @@ const Contratos = ({ usuario }) => {
     fetchEquipamentos();
   }, []);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus, filterDataDe, filterDataAte]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus, filterDataDe, filterDataAte, filterVencimento]);
 
   const fetchContratos = async () => {
     try {
@@ -215,7 +241,8 @@ const Contratos = ({ usuario }) => {
         equipamento_id: contrato.equipamento_id || '',
         data_inicio: contrato.data_inicio ? contrato.data_inicio.split('T')[0] : '',
         data_fim: contrato.data_fim ? contrato.data_fim.split('T')[0] : '',
-        valor_mensal: contrato.valor_mensal || ''
+        valor_mensal: contrato.valor_mensal || '',
+        status: contrato.status || 'ativo'
       });
       setEditingId(id);
       setShowForm(true);
@@ -240,7 +267,7 @@ const Contratos = ({ usuario }) => {
   };
 
   const resetForm = () => {
-    setFormData({ cliente_id: '', equipamento_id: '', data_inicio: '', data_fim: '', valor_mensal: '' });
+    setFormData({ cliente_id: '', equipamento_id: '', data_inicio: '', data_fim: '', valor_mensal: '', status: '' });
     setEditingId(null);
     setShowForm(false);
   };
@@ -250,8 +277,10 @@ const Contratos = ({ usuario }) => {
     setFilterStatus('');
     setFilterDataDe('');
     setFilterDataAte('');
+    setFilterVencimento(0);
+    setSearchParams({});
   };
-  const hasFilters = searchTerm || filterStatus || filterDataDe || filterDataAte;
+  const hasFilters = searchTerm || filterStatus || filterDataDe || filterDataAte || filterVencimento > 0;
 
   const getClienteNome = (id) => {
     const cliente = clientes.find(c => c.id === id);
@@ -263,10 +292,21 @@ const Contratos = ({ usuario }) => {
     return equip ? `${equip.marca} ${equip.modelo}` : 'Desconhecido';
   };
 
-  // IDs de equipamentos já em contratos ativos (exceto o contrato em edição)
+  const getStatusBadge = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'pendente':   return { cls: 'bg-warning text-dark', label: 'Pendente' };
+      case 'ativo':      return { cls: 'bg-success',           label: 'Ativo' };
+      case 'finalizado': return { cls: '', style: { background: '#f97316', color: '#fff' }, label: 'Aguard. devolução' };
+      case 'devolvido':  return { cls: 'bg-secondary',         label: 'Concluído' };
+      case 'cancelado':  return { cls: 'bg-danger',            label: 'Cancelado' };
+      default:           return { cls: 'bg-light text-dark',   label: status || '-' };
+    }
+  };
+
+  // Bloqueia equipamentos em contratos ativos OU pendentes (reservados para início futuro)
   const emUsoIds = new Set(
     contratos
-      .filter(c => (c.status || '').toLowerCase() === 'ativo' && c.id !== editingId)
+      .filter(c => ['ativo', 'pendente'].includes((c.status || '').toLowerCase()) && c.id !== editingId)
       .map(c => c.equipamento_id)
   );
 
@@ -287,7 +327,16 @@ const Contratos = ({ usuario }) => {
     const matchDe = !filterDataDe || (dataInicio && dataInicio >= new Date(filterDataDe));
     const matchAte = !filterDataAte || (dataInicio && dataInicio <= new Date(filterDataAte));
 
-    return matchSearch && matchStatus && matchDe && matchAte;
+    let matchVencimento = true;
+    if (filterVencimento > 0) {
+      if (!contrato.data_fim) return false;
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const limite = new Date(hoje); limite.setDate(hoje.getDate() + filterVencimento);
+      const dataFim = new Date(contrato.data_fim);
+      matchVencimento = dataFim >= hoje && dataFim <= limite && (contrato.status || '').toLowerCase() === 'ativo';
+    }
+
+    return matchSearch && matchStatus && matchDe && matchAte && matchVencimento;
   });
 
   const totalPages = Math.ceil(filteredContratos.length / itemsPerPage);
@@ -439,6 +488,25 @@ const Contratos = ({ usuario }) => {
                   </div>
                 </div>
               </div>
+
+              {editingId && (
+                <div className="row">
+                  <div className="col-md-4">
+                    <div className="form-group mb-3">
+                      <label className="form-label">Status</label>
+                      <select name="status" className="form-select" value={formData.status} onChange={handleInputChange}>
+                        <option value="pendente">Pendente — aguardando início</option>
+                        <option value="ativo">Ativo — em andamento</option>
+                        <option value="finalizado">Aguardando devolução — prazo vencido</option>
+                        <option value="devolvido">Concluído — equipamento devolvido</option>
+                        <option value="cancelado">Cancelado — rescindido</option>
+                      </select>
+                      <small className="text-muted">A data de vencimento continua ativando a finalização automática.</small>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="d-flex justify-content-end gap-2">
                 <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Cancelar</button>
                 <button type="submit" className="btn btn-success">{editingId ? 'Salvar Alterações' : 'Cadastrar Contrato'}</button>
@@ -479,8 +547,11 @@ const Contratos = ({ usuario }) => {
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
                 <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
                 <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
+                <option value="finalizado">Aguardando devolução</option>
+                <option value="devolvido">Concluído</option>
+                <option value="cancelado">Cancelado</option>
               </select>
             </div>
             <div className="d-flex align-items-center gap-1">
@@ -503,20 +574,56 @@ const Contratos = ({ usuario }) => {
                 style={{ width: '150px' }}
               />
             </div>
+            {filterVencimento > 0 && (
+              <span
+                className="badge d-flex align-items-center gap-1"
+                style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fcd34d', fontWeight: 600, fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              >
+                Vence em {filterVencimento} dias
+                <button
+                  type="button"
+                  onClick={() => { setFilterVencimento(0); setSearchParams({}); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', padding: 0, lineHeight: 1, marginLeft: '2px' }}
+                  aria-label="Remover filtro"
+                >✕</button>
+              </span>
+            )}
             {hasFilters && (
               <button className="btn btn-sm btn-outline-secondary" onClick={clearFilters}>
                 Limpar filtros
               </button>
             )}
-            <button
-              className="btn btn-sm btn-outline-danger ms-auto"
-              onClick={exportPDF}
-              disabled={filteredContratos.length === 0}
-              title="Exportar lista atual como PDF"
-            >
-              Exportar PDF
-            </button>
+            <div className="d-flex gap-2 ms-auto">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={handleEnviarAlertas}
+                disabled={enviandoEmail}
+                style={{ borderColor: '#d97706', color: '#d97706' }}
+                title="Enviar e-mail de alerta para clientes com contratos vencendo em 30 dias"
+              >
+                {enviandoEmail ? 'Enviando...' : 'Enviar alertas'}
+              </button>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={exportPDF}
+                disabled={filteredContratos.length === 0}
+                title="Exportar lista atual como PDF"
+              >
+                Exportar PDF
+              </button>
+            </div>
           </div>
+          {emailResult && (
+            <div className={`mx-3 mt-2 mb-1 alert py-2 mb-0 ${emailResult.ok ? 'alert-success' : 'alert-danger'}`}>
+              {emailResult.ok ? (
+                emailResult.enviados === 0
+                  ? emailResult.message
+                  : <><strong>{emailResult.enviados}</strong> e-mail(s) enviado(s) com sucesso{emailResult.erros?.length > 0 && <span className="text-danger ms-2">· {emailResult.erros.length} falha(s)</span>}</>
+              ) : (
+                <><strong>Erro:</strong> {emailResult.error}</>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="card-body p-0">
@@ -556,9 +663,7 @@ const Contratos = ({ usuario }) => {
                           </strong>
                         </td>
                         <td>
-                          <span className={`badge ${contrato.status === 'ativo' || contrato.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}`}>
-                            {contrato.status || '-'}
-                          </span>
+                          {(() => { const b = getStatusBadge(contrato.status); return <span className={`badge ${b.cls}`} style={b.style || {}}>{b.label}</span>; })()}
                         </td>
                         <td className="text-center">
                           {canEdit && (
