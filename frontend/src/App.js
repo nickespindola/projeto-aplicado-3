@@ -13,9 +13,7 @@ import Login from './pages/Login/';
 axios.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   error => Promise.reject(error)
@@ -60,54 +58,85 @@ const IconShield = () => (
   </svg>
 );
 
-function Sidebar({ usuario }) {
-  const location = useLocation();
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+);
 
-  const isActive = (path) => {
-    return location.pathname.toLowerCase() === path.toLowerCase();
-  };
+const IconChevronsLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="11 17 6 12 11 7"/>
+    <polyline points="18 17 13 12 18 7"/>
+  </svg>
+);
+
+const IconChevronsRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="13 17 18 12 13 7"/>
+    <polyline points="6 17 11 12 6 7"/>
+  </svg>
+);
+
+function Sidebar({ usuario, isOpen, isCollapsed, onCollapse, onMobileClose }) {
+  const location = useLocation();
+  const isActive = (path) => location.pathname.toLowerCase() === path.toLowerCase();
+  const handleLinkClick = () => { if (onMobileClose) onMobileClose(); };
+
+  const navItems = [
+    { to: '/', icon: <IconHome />, label: 'Dashboard' },
+    { to: '/clientes', icon: <IconUsers />, label: 'Clientes' },
+    { to: '/equipamentos', icon: <IconMonitor />, label: 'Equipamentos' },
+    { to: '/contratos', icon: <IconFile />, label: 'Contratos' },
+  ];
+
+  if (usuario && usuario.role === 'admin') {
+    navItems.push({ to: '/usuarios', icon: <IconShield />, label: 'Usuários' });
+  }
 
   return (
-    <div className="sidebar">
+    <aside className={`sidebar${isOpen ? ' open' : ''}${isCollapsed ? ' collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <button
+          className="sidebar-collapse-btn"
+          onClick={onCollapse}
+          title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+        >
+          {isCollapsed ? <IconChevronsRight /> : <IconChevronsLeft />}
+        </button>
+      </div>
+
       <ul className="sidebar-nav">
-        <li className="sidebar-nav-item">
-          <Link to="/" className={`sidebar-nav-link ${isActive('/') ? 'active' : ''}`}>
-            <span className="sidebar-nav-icon"><IconHome /></span>
-            <span>Dashboard</span>
-          </Link>
-        </li>
-        <li className="sidebar-nav-item">
-          <Link to="/clientes" className={`sidebar-nav-link ${isActive('/clientes') ? 'active' : ''}`}>
-            <span className="sidebar-nav-icon"><IconUsers /></span>
-            <span>Clientes</span>
-          </Link>
-        </li>
-        <li className="sidebar-nav-item">
-          <Link to="/equipamentos" className={`sidebar-nav-link ${isActive('/equipamentos') ? 'active' : ''}`}>
-            <span className="sidebar-nav-icon"><IconMonitor /></span>
-            <span>Equipamentos</span>
-          </Link>
-        </li>
-        <li className="sidebar-nav-item">
-          <Link to="/contratos" className={`sidebar-nav-link ${isActive('/contratos') ? 'active' : ''}`}>
-            <span className="sidebar-nav-icon"><IconFile /></span>
-            <span>Contratos</span>
-          </Link>
-        </li>
-        {usuario && usuario.role === 'admin' && (
-          <li className="sidebar-nav-item">
-            <Link to="/usuarios" className={`sidebar-nav-link ${isActive('/usuarios') ? 'active' : ''}`}>
-              <span className="sidebar-nav-icon"><IconShield /></span>
-              <span>Usuários</span>
+        {navItems.map(item => (
+          <li key={item.to} className="sidebar-nav-item">
+            <Link
+              to={item.to}
+              className={`sidebar-nav-link${isActive(item.to) ? ' active' : ''}`}
+              onClick={handleLinkClick}
+              title={isCollapsed ? item.label : ''}
+            >
+              <span className="sidebar-nav-icon">{item.icon}</span>
+              <span className="sidebar-nav-text">{item.label}</span>
             </Link>
           </li>
-        )}
+        ))}
       </ul>
-    </div>
+    </aside>
   );
 }
 
 function AppContent({ usuario, onLogout }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth >= 768) setSidebarOpen(false); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const getRoleBadge = (role) => {
     const badges = {
       admin: { text: 'Admin', color: '#e74c3c' },
@@ -122,20 +151,26 @@ function AppContent({ usuario, onLogout }) {
   return (
     <>
       <nav className="main-navbar">
-        <Link to="/" className="navbar-brand">
-          LocaTech
-        </Link>
+        <div className="d-flex align-items-center gap-2">
+          <button
+            className="hamburger-btn"
+            onClick={() => setSidebarOpen(prev => !prev)}
+            aria-label="Abrir menu de navegação"
+          >
+            <IconMenu />
+          </button>
+          <Link to="/" className="navbar-brand">LocaTech</Link>
+        </div>
         <div className="navbar-actions">
           <div className="user-info">
-            <span style={{ marginRight: '8px' }}>{usuario.nome}</span>
+            <span className="user-name">{usuario.nome}</span>
             <span
               className="badge"
               style={{
                 backgroundColor: badge.color,
                 padding: '5px 10px',
                 borderRadius: '12px',
-                fontSize: '0.75rem',
-                marginRight: '15px'
+                fontSize: '0.75rem'
               }}
             >
               {badge.text}
@@ -151,8 +186,18 @@ function AppContent({ usuario, onLogout }) {
         </div>
       </nav>
 
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       <div className="app-layout">
-        <Sidebar usuario={usuario} />
+        <Sidebar
+          usuario={usuario}
+          isOpen={sidebarOpen}
+          isCollapsed={sidebarCollapsed}
+          onCollapse={() => setSidebarCollapsed(prev => !prev)}
+          onMobileClose={() => setSidebarOpen(false)}
+        />
         <main className="main-content">
           <Routes>
             <Route path='/' element={<Dashboard usuario={usuario} />} />
@@ -174,16 +219,11 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const usuarioSalvo = localStorage.getItem('usuario');
-
-    if (token && usuarioSalvo) {
-      setUsuario(JSON.parse(usuarioSalvo));
-    }
+    if (token && usuarioSalvo) setUsuario(JSON.parse(usuarioSalvo));
     setLoading(false);
   }, []);
 
-  const handleLogin = (dadosUsuario) => {
-    setUsuario(dadosUsuario);
-  };
+  const handleLogin = (dadosUsuario) => setUsuario(dadosUsuario);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
