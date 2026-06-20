@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -17,6 +17,109 @@ const IconTrash = () => (
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
   </svg>
 );
+
+const EquipamentoSelector = ({ value, onChange, equipamentos, emUsoIds }) => {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected = equipamentos.find(e => e.id === Number(value));
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const disponiveis = equipamentos.filter(e => !emUsoIds.has(e.id));
+  const filtered = disponiveis.filter(e =>
+    !search ||
+    e.tipo.toLowerCase().includes(search.toLowerCase()) ||
+    e.marca.toLowerCase().includes(search.toLowerCase()) ||
+    e.modelo.toLowerCase().includes(search.toLowerCase()) ||
+    e.numero_serie.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSelect = (equip) => {
+    onChange(equip.id);
+    setSearch('');
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      {selected ? (
+        <div
+          className="form-control d-flex justify-content-between align-items-center"
+          style={{ background: '#f8f9fa', cursor: 'default', minHeight: '38px' }}
+        >
+          <span>
+            <span className="badge bg-secondary me-2">{selected.tipo}</span>
+            <strong>{selected.marca} {selected.modelo}</strong>
+            <span className="text-muted ms-2" style={{ fontSize: '0.82em' }}>
+              S/N: {selected.numero_serie}
+            </span>
+          </span>
+          <button
+            type="button"
+            className="btn-close"
+            style={{ fontSize: '0.65rem' }}
+            onClick={() => onChange('')}
+            title="Remover seleção"
+          />
+        </div>
+      ) : (
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Buscar por tipo, marca, modelo ou nº de série..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          autoComplete="off"
+        />
+      )}
+
+      {open && !selected && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0,
+          zIndex: 1050, background: 'white', border: '1px solid #dee2e6',
+          borderRadius: '0.375rem', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+          maxHeight: '260px', overflowY: 'auto'
+        }}>
+          {filtered.length === 0 ? (
+            <div className="p-3 text-center text-muted" style={{ fontSize: '0.9rem' }}>
+              {disponiveis.length === 0
+                ? 'Todos os equipamentos já estão em contratos ativos.'
+                : 'Nenhum equipamento encontrado com este filtro.'}
+            </div>
+          ) : (
+            filtered.map(equip => (
+              <div
+                key={equip.id}
+                onMouseDown={() => handleSelect(equip)}
+                style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f3f3' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span className="badge bg-secondary me-2" style={{ minWidth: '74px' }}>{equip.tipo}</span>
+                <strong>{equip.marca} {equip.modelo}</strong>
+                <span className="text-muted ms-2" style={{ fontSize: '0.82em' }}>
+                  S/N: {equip.numero_serie}
+                </span>
+              </div>
+            ))
+          )}
+          {disponiveis.length > 0 && (
+            <div className="px-3 py-1 border-top" style={{ fontSize: '0.75rem', color: '#999' }}>
+              {filtered.length} disponível(is) · {equipamentos.length - disponiveis.length} em uso
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Contratos = ({ usuario }) => {
   const [contratos, setContratos] = useState([]);
@@ -83,6 +186,10 @@ const Contratos = ({ usuario }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.equipamento_id) {
+      alert('Selecione um equipamento.');
+      return;
+    }
     try {
       if (editingId) {
         await axios.put(`http://localhost:8081/contrato/${editingId}`, formData);
@@ -155,6 +262,13 @@ const Contratos = ({ usuario }) => {
     const equip = equipamentos.find(e => e.id === id);
     return equip ? `${equip.marca} ${equip.modelo}` : 'Desconhecido';
   };
+
+  // IDs de equipamentos já em contratos ativos (exceto o contrato em edição)
+  const emUsoIds = new Set(
+    contratos
+      .filter(c => (c.status || '').toLowerCase() === 'ativo' && c.id !== editingId)
+      .map(c => c.equipamento_id)
+  );
 
   const filteredContratos = contratos.filter(contrato => {
     const clienteNome = getClienteNome(contrato.cliente_id).toLowerCase();
@@ -280,7 +394,7 @@ const Contratos = ({ usuario }) => {
                       <option value="">Selecione um cliente</option>
                       {clientes.map(cliente => (
                         <option key={cliente.id} value={cliente.id}>
-                          {cliente.nome} - {cliente.cpf_cnpj}
+                          {cliente.nome} — {cliente.cpf || cliente.cnpj || ''}
                         </option>
                       ))}
                     </select>
@@ -290,15 +404,17 @@ const Contratos = ({ usuario }) => {
                 <div className="col-md-6">
                   <div className="form-group mb-3">
                     <label className="form-label">Equipamento <span className="text-danger">*</span></label>
-                    <select name="equipamento_id" className="form-select" value={formData.equipamento_id} onChange={handleInputChange} required>
-                      <option value="">Selecione um equipamento</option>
-                      {equipamentos.map(equip => (
-                        <option key={equip.id} value={equip.id}>
-                          {equip.tipo} - {equip.marca} {equip.modelo} (S/N: {equip.numero_serie})
-                        </option>
-                      ))}
-                    </select>
-                    <small className="text-muted">Selecione o equipamento a ser locado</small>
+                    <EquipamentoSelector
+                      value={formData.equipamento_id}
+                      onChange={(id) => setFormData(prev => ({ ...prev, equipamento_id: id }))}
+                      equipamentos={equipamentos}
+                      emUsoIds={emUsoIds}
+                    />
+                    <small className="text-muted">
+                      {emUsoIds.size > 0
+                        ? `${equipamentos.length - emUsoIds.size} disponível(is) de ${equipamentos.length}`
+                        : 'Todos os equipamentos estão disponíveis'}
+                    </small>
                   </div>
                 </div>
               </div>
