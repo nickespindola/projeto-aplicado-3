@@ -381,7 +381,7 @@ const Contratos = ({ usuario }) => {
 
       {showForm && (
         <div className="card mb-4">
-          <div className="card-header" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+          <div className="card-header">
             <h5 className="mb-0">{editingId ? 'Editar Contrato' : 'Novo Contrato'}</h5>
           </div>
           <div className="card-body">
@@ -449,7 +449,7 @@ const Contratos = ({ usuario }) => {
       )}
 
       <div className="card">
-        <div className="card-header" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+        <div className="card-header">
           <h5 className="mb-0">
             Contratos
             {hasFilters
@@ -530,7 +530,7 @@ const Contratos = ({ usuario }) => {
             <>
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
-                  <thead style={{ backgroundColor: '#f8f9fa' }}>
+                  <thead>
                     <tr>
                       <th>ID</th>
                       <th>Cliente</th>

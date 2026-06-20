@@ -266,7 +266,7 @@ const Clientes = ({ usuario }) => {
 
       {showForm && (
         <div className="card mb-4">
-          <div className="card-header" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <div className="card-header">
             <h5 className="mb-0">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h5>
           </div>
           <div className="card-body">
@@ -339,7 +339,7 @@ const Clientes = ({ usuario }) => {
       )}
 
       <div className="card">
-        <div className="card-header" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <div className="card-header">
           <h5 className="mb-0">
             Clientes{hasFilters ? ` — ${filteredClientes.length} de ${clientes.length}` : ` (${clientes.length})`}
           </h5>
@@ -384,7 +384,7 @@ const Clientes = ({ usuario }) => {
             <>
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
-                  <thead style={{ backgroundColor: '#f8f9fa' }}>
+                  <thead>
                     <tr>
                       <th style={{ width: '40px' }}></th>
                       <th style={{ width: '60px' }}>ID</th>

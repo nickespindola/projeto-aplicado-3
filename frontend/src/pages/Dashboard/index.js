@@ -173,15 +173,15 @@ const Dashboard = () => {
     <div className="fade-in">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="mb-1" style={{ color: '#2c3e50', fontWeight: '700' }}>Dashboard</h2>
+          <h2 className="mb-1" style={{ fontWeight: '700' }}>Dashboard</h2>
           <p className="text-muted mb-0">Visão geral do sistema de gestão</p>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="stats-grid">
-        <div className="stat-card" style={{ borderLeft: '4px solid #667eea' }}>
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid #4f46e5' }}>
+          <div className="stat-icon" style={{ background: '#eef2ff', color: '#4f46e5' }}>
             <IconUsers />
           </div>
           <div className="stat-content">
@@ -189,8 +189,8 @@ const Dashboard = () => {
             <p>Total de Clientes</p>
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #11998e' }}>
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid #059669' }}>
+          <div className="stat-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
             <IconMonitor />
           </div>
           <div className="stat-content">
@@ -198,8 +198,8 @@ const Dashboard = () => {
             <p>Equipamentos</p>
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #f093fb' }}>
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid #7c3aed' }}>
+          <div className="stat-icon" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
             <IconFile />
           </div>
           <div className="stat-content">
@@ -207,8 +207,8 @@ const Dashboard = () => {
             <p>Total de Contratos</p>
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #4facfe' }}>
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid #0284c7' }}>
+          <div className="stat-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
             <IconCheckCircle />
           </div>
           <div className="stat-content">
@@ -216,8 +216,8 @@ const Dashboard = () => {
             <p>Contratos Ativos</p>
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #fa709a' }}>
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid #d97706' }}>
+          <div className="stat-icon" style={{ background: '#fffbeb', color: '#d97706' }}>
             <IconAlertTriangle />
           </div>
           <div className="stat-content">
@@ -343,10 +343,10 @@ const Dashboard = () => {
                     <Area
                       type="monotone"
                       dataKey="receita"
-                      stroke="#667eea"
+                      stroke="#4f46e5"
                       strokeWidth={2}
                       fill="url(#gradReceita)"
-                      dot={{ r: 4, fill: '#667eea' }}
+                      dot={{ r: 4, fill: '#4f46e5' }}
                       activeDot={{ r: 6 }}
                     />
                   </AreaChart>
@@ -368,10 +368,7 @@ const Dashboard = () => {
               <div className="d-flex flex-wrap gap-3">
                 <Link to="/clientes" className="btn btn-primary">Novo Cliente</Link>
                 <Link to="/equipamentos" className="btn btn-success">Novo Equipamento</Link>
-                <Link to="/contratos" className="btn" style={{
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white'
-                }}>
+                <Link to="/contratos" className="btn" style={{ background: '#7c3aed', color: 'white' }}>
                   Novo Contrato
                 </Link>
                 <Link to="/contratos" className="btn btn-outline-primary">Ver Todos os Contratos</Link>

@@ -168,7 +168,7 @@ const Usuarios = ({ usuario }) => {
 
       {showForm && (
         <div className="card mb-4">
-          <div className="card-header" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <div className="card-header">
             <h5 className="mb-0">{editingId ? 'Editar Usuário' : 'Novo Usuário'}</h5>
           </div>
           <div className="card-body">
@@ -292,7 +292,7 @@ const Usuarios = ({ usuario }) => {
             <>
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
-                  <thead style={{ backgroundColor: '#f8f9fa' }}>
+                  <thead>
                     <tr>
                       <th>ID</th>
                       <th>Nome</th>
