@@ -64,7 +64,7 @@ const Login = ({ onLogin }) => {
 
           <div className="form-group mb-3">
             <label htmlFor="email" className="form-label">
-              📧 E-mail
+              E-mail
             </label>
             <input
               type="email"
@@ -81,7 +81,7 @@ const Login = ({ onLogin }) => {
 
           <div className="form-group mb-4">
             <label htmlFor="senha" className="form-label">
-              🔒 Senha
+              Senha
             </label>
             <div className="password-wrapper">
               <input
@@ -127,7 +127,7 @@ const Login = ({ onLogin }) => {
                 Entrando...
               </>
             ) : (
-              '🚀 Entrar'
+              'Entrar'
             )}
           </button>
         </form>

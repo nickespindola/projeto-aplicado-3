@@ -1,6 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+
+const IconUsers = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const IconMonitor = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+    <line x1="8" y1="21" x2="16" y2="21"/>
+    <line x1="12" y1="17" x2="12" y2="21"/>
+  </svg>
+);
+
+const IconFile = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+  </svg>
+);
+
+const IconCheckCircle = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
+
+const IconAlertTriangle = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -21,7 +62,6 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Carregar todas as estatísticas
       const [clientesRes, equipamentosRes, contratosRes] = await Promise.all([
         axios.get('http://localhost:8081/clientes'),
         axios.get('http://localhost:8081/equipamento'),
@@ -47,16 +87,11 @@ const Dashboard = () => {
         totalClientes: clientesRes.data.length,
         totalEquipamentos: equipamentosRes.data.length,
         totalContratos: contratos.length,
-        contratosAtivos: contratosAtivos,
+        contratosAtivos,
         contratosProximosVencimento: proximosVencimento
       });
 
-      // Pegar os 5 contratos mais recentes
-      const recentes = contratos
-        .sort((a, b) => b.id - a.id)
-        .slice(0, 5);
-      setRecentContratos(recentes);
-
+      setRecentContratos(contratos.sort((a, b) => b.id - a.id).slice(0, 5));
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
     } finally {
@@ -83,11 +118,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Cards de Estatísticas */}
       <div className="stats-grid">
         <div className="stat-card" style={{ borderLeft: '4px solid #667eea' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            👥
+            <IconUsers />
           </div>
           <div className="stat-content">
             <h3>{stats.totalClientes}</h3>
@@ -97,7 +131,7 @@ const Dashboard = () => {
 
         <div className="stat-card" style={{ borderLeft: '4px solid #11998e' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
-            💻
+            <IconMonitor />
           </div>
           <div className="stat-content">
             <h3>{stats.totalEquipamentos}</h3>
@@ -107,17 +141,17 @@ const Dashboard = () => {
 
         <div className="stat-card" style={{ borderLeft: '4px solid #f093fb' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-            📋
+            <IconFile />
           </div>
           <div className="stat-content">
             <h3>{stats.totalContratos}</h3>
-            <p>Total Contratos</p>
+            <p>Total de Contratos</p>
           </div>
         </div>
 
         <div className="stat-card" style={{ borderLeft: '4px solid #4facfe' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
-            ✅
+            <IconCheckCircle />
           </div>
           <div className="stat-content">
             <h3>{stats.contratosAtivos}</h3>
@@ -127,7 +161,7 @@ const Dashboard = () => {
 
         <div className="stat-card" style={{ borderLeft: '4px solid #fa709a' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
-            ⚠️
+            <IconAlertTriangle />
           </div>
           <div className="stat-content">
             <h3>{stats.contratosProximosVencimento}</h3>
@@ -136,42 +170,34 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Ações Rápidas */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="card">
             <div className="card-header">
-              <h5 className="mb-0">⚡ Ações Rápidas</h5>
+              <h5 className="mb-0">Ações Rápidas</h5>
             </div>
             <div className="card-body">
               <div className="d-flex flex-wrap gap-3">
-                <Link to="/clientes" className="btn btn-primary">
-                  <span>👤</span> Novo Cliente
-                </Link>
-                <Link to="/equipamentos" className="btn btn-success">
-                  <span>💻</span> Novo Equipamento
-                </Link>
+                <Link to="/clientes" className="btn btn-primary">Novo Cliente</Link>
+                <Link to="/equipamentos" className="btn btn-success">Novo Equipamento</Link>
                 <Link to="/contratos" className="btn" style={{
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   color: 'white'
                 }}>
-                  <span>📝</span> Novo Contrato
+                  Novo Contrato
                 </Link>
-                <Link to="/contratos" className="btn btn-outline-primary">
-                  <span>📊</span> Ver Todos os Contratos
-                </Link>
+                <Link to="/contratos" className="btn btn-outline-primary">Ver Todos os Contratos</Link>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Contratos Recentes */}
       <div className="row">
         <div className="col-12">
           <div className="card">
             <div className="card-header">
-              <h5 className="mb-0">📋 Contratos Recentes</h5>
+              <h5 className="mb-0">Contratos Recentes</h5>
             </div>
             <div className="card-body">
               {recentContratos.length > 0 ? (
@@ -212,10 +238,7 @@ const Dashboard = () => {
                             </strong>
                           </td>
                           <td>
-                            <span className={`badge ${contrato.status === 'ativo' || contrato.status === 'Ativo'
-                              ? 'bg-success'
-                              : 'bg-secondary'
-                              }`}>
+                            <span className={`badge ${contrato.status === 'ativo' || contrato.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}`}>
                               {contrato.status || 'N/A'}
                             </span>
                           </td>
@@ -232,17 +255,12 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Alertas */}
       {stats.contratosProximosVencimento > 0 && (
         <div className="row mt-4">
           <div className="col-12">
-            <div className="alert alert-warning d-flex align-items-center" role="alert">
-              <span style={{ fontSize: '2rem', marginRight: '1rem' }}>⚠️</span>
-              <div>
-                <strong>Atenção!</strong> Você tem {stats.contratosProximosVencimento} contrato(s)
-                vencendo nos próximos 30 dias.
-                <Link to="/contratos" className="alert-link ms-2">Ver contratos</Link>
-              </div>
+            <div className="alert alert-warning" role="alert">
+              <strong>Atenção!</strong> Você tem {stats.contratosProximosVencimento} contrato(s) vencendo nos próximos 30 dias.{' '}
+              <Link to="/contratos" className="alert-link">Ver contratos</Link>
             </div>
           </div>
         </div>

@@ -118,9 +118,15 @@ body {
 }
 
 .sidebar-nav-icon {
-  font-size: 1.3rem;
-  width: 24px;
-  text-align: center;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon {
+  color: white;
 }
 
 /* Main Content */
@@ -143,8 +149,7 @@ body {
 }
 
 .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 .card-header {
