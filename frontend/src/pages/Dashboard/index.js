@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area
+} from 'recharts';
 
 const IconUsers = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -43,6 +48,16 @@ const IconAlertTriangle = () => (
   </svg>
 );
 
+const COLORS_STATUS = ['#27ae60', '#95a5a6'];
+const COLORS_CLIENTE = ['#3498db', '#e67e22'];
+const COLORS_EQUIP = ['#667eea', '#11998e', '#f5576c', '#fee140', '#4facfe', '#fa709a', '#a18cd1', '#764ba2'];
+
+const EmptyChart = ({ msg }) => (
+  <div className="d-flex align-items-center justify-content-center h-100 text-muted" style={{ minHeight: 200 }}>
+    <span>{msg || 'Sem dados suficientes'}</span>
+  </div>
+);
+
 const Dashboard = () => {
   const [stats, setStats] = useState({
     totalClientes: 0,
@@ -53,15 +68,18 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [recentContratos, setRecentContratos] = useState([]);
+  const [chartData, setChartData] = useState({
+    statusData: [],
+    clientesTipoData: [],
+    tipoEquipData: [],
+    receitaData: []
+  });
 
-  useEffect(() => {
-    carregarDashboard();
-  }, []);
+  useEffect(() => { carregarDashboard(); }, []);
 
   const carregarDashboard = async () => {
     try {
       setLoading(true);
-
       const [clientesRes, equipamentosRes, contratosRes] = await Promise.all([
         axios.get('http://localhost:8081/clientes'),
         axios.get('http://localhost:8081/equipamento'),
@@ -69,29 +87,71 @@ const Dashboard = () => {
       ]);
 
       const contratos = contratosRes.data;
+      const clientes = clientesRes.data;
+      const equipamentos = equipamentosRes.data;
       const hoje = new Date();
       const proximoMes = new Date();
       proximoMes.setDate(proximoMes.getDate() + 30);
 
       const contratosAtivos = contratos.filter(c =>
-        c.status === 'ativo' || c.status === 'Ativo'
+        (c.status || '').toLowerCase() === 'ativo'
       ).length;
 
       const proximosVencimento = contratos.filter(c => {
         if (!c.data_fim) return false;
         const dataFim = new Date(c.data_fim);
-        return dataFim >= hoje && dataFim <= proximoMes && (c.status === 'ativo' || c.status === 'Ativo');
+        return dataFim >= hoje && dataFim <= proximoMes && (c.status || '').toLowerCase() === 'ativo';
       }).length;
 
       setStats({
-        totalClientes: clientesRes.data.length,
-        totalEquipamentos: equipamentosRes.data.length,
+        totalClientes: clientes.length,
+        totalEquipamentos: equipamentos.length,
         totalContratos: contratos.length,
         contratosAtivos,
         contratosProximosVencimento: proximosVencimento
       });
 
       setRecentContratos(contratos.sort((a, b) => b.id - a.id).slice(0, 5));
+
+      // --- Chart data ---
+
+      // 1. Contratos por status
+      const statusData = [
+        { name: 'Ativos', value: contratosAtivos },
+        { name: 'Inativos', value: contratos.length - contratosAtivos }
+      ].filter(d => d.value > 0);
+
+      // 2. Clientes PF/PJ
+      const pfCount = clientes.filter(c => c.tipo_cliente === 'PF').length;
+      const pjCount = clientes.filter(c => c.tipo_cliente === 'PJ').length;
+      const clientesTipoData = [
+        { name: 'Pessoa Física', value: pfCount },
+        { name: 'Pessoa Jurídica', value: pjCount }
+      ].filter(d => d.value > 0);
+
+      // 3. Equipamentos por tipo
+      const tipoCount = {};
+      equipamentos.forEach(e => { tipoCount[e.tipo] = (tipoCount[e.tipo] || 0) + 1; });
+      const tipoEquipData = Object.entries(tipoCount)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+      // 4. Receita mensal (últimos 12 meses)
+      const revenueByMonth = {};
+      contratos.forEach(c => {
+        if (!c.data_inicio || !c.valor_mensal) return;
+        const month = c.data_inicio.substring(0, 7);
+        revenueByMonth[month] = (revenueByMonth[month] || 0) + parseFloat(c.valor_mensal);
+      });
+      const receitaData = Object.entries(revenueByMonth)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-12)
+        .map(([month, value]) => ({
+          name: new Date(month + '-02').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+          receita: Math.round(value * 100) / 100
+        }));
+
+      setChartData({ statusData, clientesTipoData, tipoEquipData, receitaData });
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
     } finally {
@@ -118,6 +178,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Stat cards */}
       <div className="stats-grid">
         <div className="stat-card" style={{ borderLeft: '4px solid #667eea' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -128,7 +189,6 @@ const Dashboard = () => {
             <p>Total de Clientes</p>
           </div>
         </div>
-
         <div className="stat-card" style={{ borderLeft: '4px solid #11998e' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
             <IconMonitor />
@@ -138,7 +198,6 @@ const Dashboard = () => {
             <p>Equipamentos</p>
           </div>
         </div>
-
         <div className="stat-card" style={{ borderLeft: '4px solid #f093fb' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
             <IconFile />
@@ -148,7 +207,6 @@ const Dashboard = () => {
             <p>Total de Contratos</p>
           </div>
         </div>
-
         <div className="stat-card" style={{ borderLeft: '4px solid #4facfe' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
             <IconCheckCircle />
@@ -158,7 +216,6 @@ const Dashboard = () => {
             <p>Contratos Ativos</p>
           </div>
         </div>
-
         <div className="stat-card" style={{ borderLeft: '4px solid #fa709a' }}>
           <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
             <IconAlertTriangle />
@@ -170,6 +227,137 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Charts row 1 */}
+      <div className="row mb-4">
+        <div className="col-md-6 mb-4 mb-md-0">
+          <div className="card h-100">
+            <div className="card-header">
+              <h5 className="mb-0">Contratos por Status</h5>
+            </div>
+            <div className="card-body d-flex align-items-center justify-content-center">
+              {chartData.statusData.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={chartData.statusData}
+                      cx="50%" cy="50%"
+                      innerRadius={65} outerRadius={95}
+                      dataKey="value"
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {chartData.statusData.map((_, i) => (
+                        <Cell key={i} fill={COLORS_STATUS[i % COLORS_STATUS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, name) => [v, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card h-100">
+            <div className="card-header">
+              <h5 className="mb-0">Clientes por Tipo</h5>
+            </div>
+            <div className="card-body d-flex align-items-center justify-content-center">
+              {chartData.clientesTipoData.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={chartData.clientesTipoData}
+                      cx="50%" cy="50%"
+                      innerRadius={65} outerRadius={95}
+                      dataKey="value"
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {chartData.clientesTipoData.map((_, i) => (
+                        <Cell key={i} fill={COLORS_CLIENTE[i % COLORS_CLIENTE.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, name) => [v, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts row 2 */}
+      <div className="row mb-4">
+        <div className="col-md-6 mb-4 mb-md-0">
+          <div className="card h-100">
+            <div className="card-header">
+              <h5 className="mb-0">Equipamentos por Tipo</h5>
+            </div>
+            <div className="card-body">
+              {chartData.tipoEquipData.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={chartData.tipoEquipData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Quantidade" radius={[4, 4, 0, 0]}>
+                      {chartData.tipoEquipData.map((_, i) => (
+                        <Cell key={i} fill={COLORS_EQUIP[i % COLORS_EQUIP.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card h-100">
+            <div className="card-header">
+              <h5 className="mb-0">Receita Mensal (R$)</h5>
+            </div>
+            <div className="card-body">
+              {chartData.receitaData.length === 0 ? <EmptyChart /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={chartData.receitaData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradReceita" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#667eea" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis
+                      tickFormatter={v => `R$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
+                      tick={{ fontSize: 11 }}
+                      width={50}
+                    />
+                    <Tooltip formatter={v => [`R$ ${v.toFixed(2)}`, 'Receita']} />
+                    <Area
+                      type="monotone"
+                      dataKey="receita"
+                      stroke="#667eea"
+                      strokeWidth={2}
+                      fill="url(#gradReceita)"
+                      dot={{ r: 4, fill: '#667eea' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick actions */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="card">
@@ -193,6 +381,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Recent contracts */}
       <div className="row">
         <div className="col-12">
           <div className="card">
@@ -220,25 +409,15 @@ const Dashboard = () => {
                           <td><strong>#{contrato.id}</strong></td>
                           <td>{contrato.cliente || 'N/A'}</td>
                           <td>{contrato.equipamento || 'N/A'}</td>
-                          <td>
-                            {contrato.data_inicio
-                              ? new Date(contrato.data_inicio).toLocaleDateString('pt-BR')
-                              : 'N/A'
-                            }
-                          </td>
-                          <td>
-                            {contrato.data_fim
-                              ? new Date(contrato.data_fim).toLocaleDateString('pt-BR')
-                              : 'N/A'
-                            }
-                          </td>
+                          <td>{contrato.data_inicio ? new Date(contrato.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                          <td>{contrato.data_fim ? new Date(contrato.data_fim).toLocaleDateString('pt-BR') : 'N/A'}</td>
                           <td>
                             <strong style={{ color: '#11998e' }}>
                               R$ {parseFloat(contrato.valor_mensal || 0).toFixed(2)}
                             </strong>
                           </td>
                           <td>
-                            <span className={`badge ${contrato.status === 'ativo' || contrato.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}`}>
+                            <span className={`badge ${(contrato.status || '').toLowerCase() === 'ativo' ? 'bg-success' : 'bg-secondary'}`}>
                               {contrato.status || 'N/A'}
                             </span>
                           </td>

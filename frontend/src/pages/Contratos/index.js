@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Pagination from '../../components/Pagination';
 
 const IconEdit = () => (
@@ -185,6 +187,67 @@ const Contratos = ({ usuario }) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const geradoEm = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    doc.setFontSize(18);
+    doc.setTextColor(44, 62, 80);
+    doc.text('LocaTech — Relatório de Contratos', 14, 18);
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Gerado em: ${geradoEm}`, 14, 26);
+    doc.text(`Total: ${filteredContratos.length} contrato(s)`, 14, 32);
+    if (hasFilters) {
+      doc.text('* Relatório com filtros aplicados', 14, 38);
+    }
+
+    autoTable(doc, {
+      startY: hasFilters ? 44 : 40,
+      head: [['#', 'Cliente', 'Equipamento', 'Início', 'Fim', 'Valor Mensal', 'Status']],
+      body: filteredContratos.map(c => [
+        `#${c.id}`,
+        getClienteNome(c.cliente_id),
+        getEquipamentoDescricao(c.equipamento_id),
+        formatDate(c.data_inicio),
+        formatDate(c.data_fim),
+        `R$ ${parseFloat(c.valor_mensal || 0).toFixed(2)}`,
+        c.status || '-'
+      ]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: {
+        fillColor: [102, 126, 234],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 14 },
+        5: { halign: 'right' },
+        6: { halign: 'center', cellWidth: 22 }
+      }
+    });
+
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(160, 160, 160);
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        doc.internal.pageSize.getWidth() - 14,
+        doc.internal.pageSize.getHeight() - 8,
+        { align: 'right' }
+      );
+    }
+
+    doc.save(`contratos-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="fade-in">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -329,6 +392,14 @@ const Contratos = ({ usuario }) => {
                 Limpar filtros
               </button>
             )}
+            <button
+              className="btn btn-sm btn-outline-danger ms-auto"
+              onClick={exportPDF}
+              disabled={filteredContratos.length === 0}
+              title="Exportar lista atual como PDF"
+            >
+              Exportar PDF
+            </button>
           </div>
         </div>
 
