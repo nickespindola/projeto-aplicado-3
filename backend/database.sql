@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS USUARIO (
 );
 
 -- Inserir usuário admin padrão (senha: admin123)
-INSERT INTO USUARIO (nome, email, senha, role) VALUES 
-('Administrador', 'admin@locatech.com', '$2b$10$XOPjKvj3hZJKj5KZxZQZHeYQGq5L5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'admin'),
-('Editor Teste', 'editor@locatech.com', '$2b$10$XOPjKvj3hZJKj5KZxZQZHeYQGq5L5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'editor'),
-('Visualizador', 'viewer@locatech.com', '$2b$10$XOPjKvj3hZJKj5KZxZQZHeYQGq5L5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'viewer');
+INSERT INTO USUARIO (nome, email, senha, role) VALUES
+('Administrador', 'admin@locatech.com', '$2b$10$jhH16mnLF7hJlfKUmqylXeJlEIBauXENMkyg.NfJxFXfne1OuiIdS', 'admin'),
+('Editor Teste', 'editor@locatech.com', '$2b$10$jhH16mnLF7hJlfKUmqylXeJlEIBauXENMkyg.NfJxFXfne1OuiIdS', 'editor'),
+('Visualizador', 'viewer@locatech.com', '$2b$10$jhH16mnLF7hJlfKUmqylXeJlEIBauXENMkyg.NfJxFXfne1OuiIdS', 'viewer');
 
 -- Tabela de Clientes
 CREATE TABLE IF NOT EXISTS CLIENTE (
