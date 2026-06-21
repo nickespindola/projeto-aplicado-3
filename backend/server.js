@@ -5,7 +5,18 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 const { authenticateToken, canEdit, canDelete, canView, JWT_SECRET } = require("./middleware/auth");
+
+const mailer = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT || '587'),
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -53,9 +64,8 @@ app.post("/auth/login", (req, res) => {
 
     const usuario = results[0];
 
-    // Por enquanto, comparação simples (depois implementar bcrypt hash)
-    // Senha padrão para todos os usuários de teste: admin123
-    if (senha !== "admin123") {
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaCorreta) {
       return res.status(401).json({ error: "Email ou senha incorretos" });
     }
 
@@ -151,7 +161,7 @@ app.post("/usuarios", authenticateToken, requireAdmin, (req, res) => {
 
   // Verificar se email já existe
   const checkEmailSql = "SELECT id FROM USUARIO WHERE email = ?";
-  db.query(checkEmailSql, [email], (err, results) => {
+  db.query(checkEmailSql, [email], async (err, results) => {
     if (err) {
       console.error("Erro ao verificar email:", err);
       return res.status(500).json({ error: "Erro do banco de dados." });
@@ -161,13 +171,13 @@ app.post("/usuarios", authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ error: "Este email já está cadastrado." });
     }
 
-    // Inserir usuário (senha em texto simples por enquanto - TODO: bcrypt)
+    const hashedSenha = await bcrypt.hash(senha, 10);
     const sql = `
-      INSERT INTO USUARIO (nome, email, senha, role, ativo) 
+      INSERT INTO USUARIO (nome, email, senha, role, ativo)
       VALUES (?, ?, ?, ?, ?)
     `;
 
-    const values = [nome, email, senha, role, ativo !== false];
+    const values = [nome, email, hashedSenha, role, ativo !== false];
 
     db.query(sql, values, (err, result) => {
       if (err) {
@@ -198,7 +208,7 @@ app.put("/usuarios/:id", authenticateToken, requireAdmin, (req, res) => {
 
   // Verificar se email já existe em outro usuário
   const checkEmailSql = "SELECT id FROM USUARIO WHERE email = ? AND id != ?";
-  db.query(checkEmailSql, [email, userId], (err, results) => {
+  db.query(checkEmailSql, [email, userId], async (err, results) => {
     if (err) {
       console.error("Erro ao verificar email:", err);
       return res.status(500).json({ error: "Erro do banco de dados." });
@@ -208,17 +218,16 @@ app.put("/usuarios/:id", authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ error: "Este email já está cadastrado em outro usuário." });
     }
 
-    // Montar SQL de atualização
     let sql, values;
 
     if (senha) {
-      // Atualizar com nova senha
+      const hashedSenha = await bcrypt.hash(senha, 10);
       sql = `
-        UPDATE USUARIO 
+        UPDATE USUARIO
         SET nome = ?, email = ?, senha = ?, role = ?, ativo = ?
         WHERE id = ?
       `;
-      values = [nome, email, senha, role, ativo !== false, userId];
+      values = [nome, email, hashedSenha, role, ativo !== false, userId];
     } else {
       // Atualizar sem alterar senha
       sql = `
@@ -275,41 +284,36 @@ app.get("/clientes", authenticateToken, canView, (req, res) => {
 
 // Criar cliente (requer autenticação e permissão de edição)
 app.post("/clientes", authenticateToken, canEdit, (req, res) => {
-  const { nome, endereco, e_mail, telefone, tipo_cliente, cpf, cnpj } = req.body;
+  const { nome, e_mail, telefone, tipo_cliente, cpf, cnpj,
+          cep, logradouro, numero, complemento, bairro, cidade, uf } = req.body;
 
-  console.log("Dados recebidos:", req.body);
-
-  if (!nome || !endereco || !e_mail || !telefone || !tipo_cliente) {
+  if (!nome || !e_mail || !telefone || !tipo_cliente || !cep || !logradouro || !numero) {
     return res.status(400).json({ error: "Faltou preencher dados obrigatórios." });
   }
 
-  // Validar tipo_cliente
   if (tipo_cliente !== 'PF' && tipo_cliente !== 'PJ') {
     return res.status(400).json({ error: "Tipo de cliente inválido. Use 'PF' ou 'PJ'." });
   }
 
   const sql = `
-    INSERT INTO CLIENTE 
-    (nome, endereco, e_mail, telefone, tipo_cliente, cpf, cnpj) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO CLIENTE
+    (nome, e_mail, telefone, tipo_cliente, cpf, cnpj, cep, logradouro, numero, complemento, bairro, cidade, uf)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const values = [nome, endereco, e_mail, telefone, tipo_cliente, cpf, cnpj];
+  const values = [
+    nome, e_mail, telefone, tipo_cliente,
+    cpf || null, cnpj || null,
+    cep, logradouro, numero,
+    complemento || null, bairro || null, cidade || null, uf || null
+  ];
 
   db.query(sql, values, (err, result) => {
     if (err) {
       console.error("Erro ao inserir cliente:", err);
-      console.error("SQL:", sql);
-      console.error("Valores:", values);
-      return res.status(500).json({
-        error: "Falha ao inserir no banco de dados.",
-        details: err.message
-      });
+      return res.status(500).json({ error: "Falha ao inserir no banco de dados.", details: err.message });
     }
-    return res.status(201).json({
-      id: result.insertId,
-      message: "Cliente cadastrado com sucesso"
-    });
+    return res.status(201).json({ id: result.insertId, message: "Cliente cadastrado com sucesso" });
   });
 });
 
@@ -377,11 +381,10 @@ app.get("/clientes/:id", authenticateToken, canView, (req, res) => {
 // Atualizar cliente
 app.put("/clientes/:id", authenticateToken, canEdit, (req, res) => {
   const clienteId = req.params.id;
-  const { nome, endereco, e_mail, telefone, tipo_cliente, cpf, cnpj } = req.body;
+  const { nome, e_mail, telefone, tipo_cliente, cpf, cnpj,
+          cep, logradouro, numero, complemento, bairro, cidade, uf } = req.body;
 
-  console.log("Atualizando cliente:", clienteId, req.body);
-
-  if (!nome || !endereco || !e_mail || !telefone || !tipo_cliente) {
+  if (!nome || !e_mail || !telefone || !tipo_cliente || !cep || !logradouro || !numero) {
     return res.status(400).json({ error: "Faltou preencher dados obrigatórios." });
   }
 
@@ -390,24 +393,26 @@ app.put("/clientes/:id", authenticateToken, canEdit, (req, res) => {
   }
 
   const sql = `
-    UPDATE CLIENTE 
-    SET nome = ?, endereco = ?, e_mail = ?, telefone = ?, tipo_cliente = ?, cpf = ?, cnpj = ?
+    UPDATE CLIENTE
+    SET nome = ?, e_mail = ?, telefone = ?, tipo_cliente = ?, cpf = ?, cnpj = ?,
+        cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, uf = ?
     WHERE id = ?
   `;
 
-  const values = [nome, endereco, e_mail, telefone, tipo_cliente, cpf, cnpj, clienteId];
+  const values = [
+    nome, e_mail, telefone, tipo_cliente,
+    cpf || null, cnpj || null,
+    cep, logradouro, numero,
+    complemento || null, bairro || null, cidade || null, uf || null,
+    clienteId
+  ];
 
-  db.query(sql, values, (err, result) => {
+  db.query(sql, values, (err) => {
     if (err) {
       console.error("Erro ao atualizar cliente:", err);
-      return res.status(500).json({
-        error: "Falha ao atualizar cliente.",
-        details: err.message
-      });
+      return res.status(500).json({ error: "Falha ao atualizar cliente.", details: err.message });
     }
-    return res.json({
-      message: "Cliente atualizado com sucesso"
-    });
+    return res.json({ message: "Cliente atualizado com sucesso" });
   });
 });
 
@@ -517,8 +522,8 @@ app.get("/clientes/search", authenticateToken, canView, (req, res) => {
 
 // Listar todos os contratos
 app.get("/contrato", authenticateToken, canView, (req, res) => {
-  const sql = `
-    SELECT 
+  const sqlSelect = `
+    SELECT
       c.id,
       c.cliente_id,
       c.equipamento_id,
@@ -534,42 +539,54 @@ app.get("/contrato", authenticateToken, canView, (req, res) => {
     ORDER BY c.id DESC
   `;
 
-  db.query(sql, (err, data) => {
-    if (err) {
-      console.error("Erro ao buscar contratos:", err);
-      return res.status(500).json({ error: "Erro do banco de dados." });
+  // Duas queries encadeadas (multipleStatements não habilitado na conexão)
+  db.query(
+    `UPDATE CONTRATO SET status = 'ativo' WHERE data_inicio <= CURDATE() AND status = 'pendente'`,
+    (err1) => {
+      if (err1) console.error("Erro ao ativar contratos pendentes:", err1);
+
+      db.query(
+        `UPDATE CONTRATO SET status = 'finalizado' WHERE data_fim < CURDATE() AND status = 'ativo'`,
+        (err2) => {
+          if (err2) console.error("Erro ao finalizar contratos vencidos:", err2);
+
+          db.query(sqlSelect, (err, data) => {
+            if (err) {
+              console.error("Erro ao buscar contratos:", err);
+              return res.status(500).json({ error: "Erro do banco de dados." });
+            }
+            return res.json(data);
+          });
+        }
+      );
     }
-    return res.json(data);
-  });
+  );
 });
 
 // Criar contrato
 app.post("/contrato", authenticateToken, canEdit, (req, res) => {
   const { cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal } = req.body;
 
-  console.log("Dados recebidos para criar contrato:", req.body);
-
   if (!cliente_id || !equipamento_id || !data_inicio || !data_fim || !valor_mensal) {
     return res.status(400).json({ error: "Todos os campos são obrigatórios." });
   }
 
+  // Início no futuro → pendente; início hoje ou passado → ativo
+  const hoje = new Date().toISOString().split('T')[0];
+  const statusInicial = data_inicio > hoje ? 'pendente' : 'ativo';
+
   const sql = `
-    INSERT INTO CONTRATO 
+    INSERT INTO CONTRATO
     (cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal, status)
-    VALUES (?, ?, ?, ?, ?, 'ativo')
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  const values = [cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal];
-
-  db.query(sql, values, (err, result) => {
+  db.query(sql, [cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal, statusInicial], (err, result) => {
     if (err) {
       console.error("Erro ao criar contrato:", err);
       return res.status(500).json({ error: "Falha ao criar contrato." });
     }
-    return res.json({
-      id: result.insertId,
-      message: "Contrato criado com sucesso"
-    });
+    return res.json({ id: result.insertId, message: "Contrato criado com sucesso", status: statusInicial });
   });
 });
 
@@ -578,8 +595,8 @@ app.get("/listarcontratos", authenticateToken, canView, (req, res) => {
   const searchTerm = req.query.search || '';
   const searchParam = `%${searchTerm}%`;
 
-  const sql = `
-    SELECT 
+  const sqlSelect = `
+    SELECT
         c.id,
         cl.nome as cliente,
         CONCAT(e.marca, ' ', e.modelo) as equipamento,
@@ -589,32 +606,39 @@ app.get("/listarcontratos", authenticateToken, canView, (req, res) => {
         FORMAT(c.valor_mensal, 2) as valor,
         c.status
     FROM CONTRATO c
-    JOIN CLIENTE cl ON c.cliente_id = cl.id  
+    JOIN CLIENTE cl ON c.cliente_id = cl.id
     JOIN EQUIPAMENTO e ON c.equipamento_id = e.id
-    WHERE 
-        c.id LIKE ? OR 
-        cl.nome LIKE ? OR 
-        e.marca LIKE ? OR 
-        e.modelo LIKE ? OR 
+    WHERE
+        c.id LIKE ? OR
+        cl.nome LIKE ? OR
+        e.marca LIKE ? OR
+        e.modelo LIKE ? OR
         e.numero_serie LIKE ?
     ORDER BY c.id DESC
-`;
+  `;
+  const params = [searchParam, searchParam, searchParam, searchParam, searchParam];
 
-  const params = [
-    searchParam,
-    searchParam,
-    searchParam,
-    searchParam,
-    searchParam
-  ];
+  db.query(
+    `UPDATE CONTRATO SET status = 'ativo' WHERE data_inicio <= CURDATE() AND status = 'pendente'`,
+    (err1) => {
+      if (err1) console.error("Erro ao ativar contratos pendentes:", err1);
 
-  db.query(sql, params, (err, data) => {
-    if (err) {
-      console.error("Erro de solicitação: ", err);
-      return res.status(500).json({ error: "Erro do banco de dados." });
+      db.query(
+        `UPDATE CONTRATO SET status = 'finalizado' WHERE data_fim < CURDATE() AND status = 'ativo'`,
+        (err2) => {
+          if (err2) console.error("Erro ao finalizar contratos vencidos:", err2);
+
+          db.query(sqlSelect, params, (err, data) => {
+            if (err) {
+              console.error("Erro de solicitação: ", err);
+              return res.status(500).json({ error: "Erro do banco de dados." });
+            }
+            return res.json(data);
+          });
+        }
+      );
     }
-    return res.json(data);
-  });
+  );
 });
 
 // Deletar contrato (requer role admin)
@@ -672,33 +696,27 @@ app.get("/contrato/:id", authenticateToken, canView, (req, res) => {
 // Atualizar contrato
 app.put("/contrato/:id", authenticateToken, canEdit, (req, res) => {
   const contratoId = req.params.id;
-  const { cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal } = req.body;
-
-  console.log("Atualizando contrato:", contratoId, req.body);
+  const { cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal, status } = req.body;
 
   if (!cliente_id || !equipamento_id || !data_inicio || !data_fim || !valor_mensal) {
     return res.status(400).json({ error: "Todos os campos são obrigatórios." });
   }
 
+  const statusValidos = ['pendente', 'ativo', 'finalizado', 'cancelado', 'devolvido'];
+  const statusFinal = statusValidos.includes(status) ? status : 'ativo';
+
   const sql = `
-    UPDATE CONTRATO 
-    SET cliente_id = ?, equipamento_id = ?, data_inicio = ?, data_fim = ?, valor_mensal = ?
+    UPDATE CONTRATO
+    SET cliente_id = ?, equipamento_id = ?, data_inicio = ?, data_fim = ?, valor_mensal = ?, status = ?
     WHERE id = ?
   `;
 
-  const values = [cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal, contratoId];
-
-  db.query(sql, values, (err, result) => {
+  db.query(sql, [cliente_id, equipamento_id, data_inicio, data_fim, valor_mensal, statusFinal, contratoId], (err) => {
     if (err) {
       console.error("Erro ao atualizar contrato:", err);
-      return res.status(500).json({
-        error: "Falha ao atualizar contrato.",
-        details: err.message
-      });
+      return res.status(500).json({ error: "Falha ao atualizar contrato.", details: err.message });
     }
-    return res.json({
-      message: "Contrato atualizado com sucesso"
-    });
+    return res.json({ message: "Contrato atualizado com sucesso" });
   });
 });
 
@@ -733,9 +751,102 @@ app.get("/clientes/find", authenticateToken, canView, (req, res) => {
   });
 });
 
+// ==================== NOTIFICAÇÕES ====================
+
+// POST /contratos/notificar-vencimento
+// Envia e-mail para clientes cujos contratos vencem nos próximos N dias (padrão: 30)
+app.post('/contratos/notificar-vencimento', authenticateToken, canEdit, (req, res) => {
+  const dias = parseInt(req.body.dias) || 30;
+
+  if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'seu-email@gmail.com') {
+    return res.status(503).json({
+      error: 'E-mail não configurado. Preencha EMAIL_USER e EMAIL_PASS no arquivo .env do backend.'
+    });
+  }
+
+  const sql = `
+    SELECT
+      c.id,
+      DATE_FORMAT(c.data_fim, '%Y-%m-%d') AS data_fim,
+      c.valor_mensal,
+      cl.nome AS cliente_nome,
+      cl.e_mail AS cliente_email,
+      CONCAT(e.marca, ' ', e.modelo) AS equipamento
+    FROM CONTRATO c
+    JOIN CLIENTE cl ON c.cliente_id = cl.id
+    JOIN EQUIPAMENTO e ON c.equipamento_id = e.id
+    WHERE c.status = 'ativo'
+      AND c.data_fim BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+      AND cl.e_mail IS NOT NULL AND cl.e_mail != ''
+    ORDER BY c.data_fim ASC
+  `;
+
+  db.query(sql, [dias], async (err, contratos) => {
+    if (err) return res.status(500).json({ error: 'Erro ao buscar contratos.' });
+
+    if (contratos.length === 0) {
+      return res.json({ enviados: 0, total: 0, semEmail: 0, erros: [],
+        message: `Nenhum contrato ativo vence nos próximos ${dias} dias (ou nenhum cliente tem e-mail cadastrado).` });
+    }
+
+    let enviados = 0;
+    const erros = [];
+
+    for (const contrato of contratos) {
+      const dataFim = new Date(contrato.data_fim + 'T12:00:00');
+      const dataFimFormatada = dataFim.toLocaleDateString('pt-BR');
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
+
+      try {
+        await mailer.sendMail({
+          from: `"LocaTech" <${process.env.EMAIL_USER}>`,
+          to: contrato.cliente_email,
+          subject: `[LocaTech] Seu contrato vence em ${diasRestantes} dia(s)`,
+          html: `
+            <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px">
+              <h2 style="color:#4f46e5;margin-top:0">LocaTech</h2>
+              <p>Olá, <strong>${contrato.cliente_nome}</strong>!</p>
+              <p>Informamos que seu contrato de locação está próximo do vencimento:</p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                <tr style="background:#f8fafc">
+                  <td style="padding:8px 12px;font-weight:600">Equipamento</td>
+                  <td style="padding:8px 12px">${contrato.equipamento}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:600">Vencimento</td>
+                  <td style="padding:8px 12px"><strong style="color:#d97706">${dataFimFormatada}</strong> (${diasRestantes} dia(s))</td>
+                </tr>
+                <tr style="background:#f8fafc">
+                  <td style="padding:8px 12px;font-weight:600">Valor mensal</td>
+                  <td style="padding:8px 12px">R$ ${parseFloat(contrato.valor_mensal).toFixed(2)}</td>
+                </tr>
+              </table>
+              <p>Caso deseje renovar o contrato ou tenha dúvidas, entre em contato conosco.</p>
+              <p style="color:#64748b;font-size:0.85em;margin-top:24px">Atenciosamente,<br><strong>LocaTech</strong></p>
+            </div>
+          `
+        });
+        enviados++;
+      } catch (emailErr) {
+        erros.push({ contratoId: contrato.id, email: contrato.cliente_email, erro: emailErr.message });
+      }
+    }
+
+    return res.json({ enviados, total: contratos.length, erros });
+  });
+});
+
 // ==================== SERVER ====================
 
 const PORT = process.env.PORT || 8081;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.db = db;

@@ -3,153 +3,149 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0f172a;
   padding: 20px;
 }
 
 .login-card {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   width: 100%;
-  max-width: 450px;
+  max-width: 420px;
   padding: 40px;
-  animation: fadeInUp 0.5s ease-out;
+  animation: fadeInUp 0.4s ease-out;
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
-.login-icon {
-  font-size: 4rem;
-  margin-bottom: 15px;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+.login-logo {
+  width: 52px;
+  height: 52px;
+  background: #4f46e5;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  color: white;
 }
 
 .login-header h1 {
-  color: #2c3e50;
+  color: #0f172a;
   font-weight: 700;
-  margin-bottom: 5px;
-  font-size: 2.5rem;
+  margin-bottom: 4px;
+  font-size: 1.75rem;
+  letter-spacing: -0.5px;
 }
 
 .login-header p {
-  color: #7f8c8d;
-  font-size: 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .login-form .form-label {
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 8px;
+  color: #0f172a;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
 }
 
 .login-form .form-control {
-  padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  padding: 0.65rem 0.875rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 0.95rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: #0f172a;
 }
 
 .login-form .form-control:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  outline: none;
 }
 
 .login-form .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4f46e5;
   border: none;
-  padding: 12px;
-  font-size: 1.1rem;
+  padding: 0.7rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  border-radius: 7px;
+  transition: background 0.15s, transform 0.15s;
+  color: white;
 }
 
 .login-form .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  background: #3730a3;
+  transform: translateY(-1px);
 }
 
 .login-form .btn-primary:disabled {
-  opacity: 0.7;
+  opacity: 0.65;
   cursor: not-allowed;
 }
 
 .login-footer {
-  margin-top: 30px;
+  margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid #e2e8f0;
 }
 
 .test-credentials {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 14px;
+  border-radius: 8px;
   text-align: center;
 }
 
-.test-credentials p {
-  margin-bottom: 10px;
-}
-
-.credentials-list {
-  font-size: 0.9rem;
-}
+.credentials-list { font-size: 0.875rem; }
 
 .credential-item {
-  padding: 5px 0;
-  color: #555;
+  padding: 3px 0;
+  color: #475569;
 }
 
-.credential-item strong {
-  color: #667eea;
+.credential-item strong { color: #4f46e5; }
+
+.password-wrapper { position: relative; }
+
+.password-wrapper .form-control { padding-right: 44px; }
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
 }
+.password-toggle:hover { color: #4f46e5; }
 
 .alert {
-  border-radius: 10px;
-  animation: shake 0.5s;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  animation: shake 0.4s;
 }
 
 @keyframes shake {
-
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  25% {
-    transform: translateX(-10px);
-  }
-
-  75% {
-    transform: translateX(10px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-8px); }
+  75%       { transform: translateX(8px); }
 }

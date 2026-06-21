@@ -4,13 +4,15 @@ Sistema completo de gestão de locação de equipamentos de informática com **c
 
 ## ✨ Funcionalidades
 
-- **🔐 Sistema de Autenticação:** Login com JWT e controle de acesso por níveis (Admin, Editor, Viewer)
+- **🔐 Sistema de Autenticação:** Login com JWT, bcrypt para hash de senhas e controle de acesso por níveis (Admin, Editor, Viewer)
 - **👥 Gestão de Usuários:** Administradores podem criar e gerenciar usuários do sistema
-- **📋 Controle de Clientes:** Cadastro completo de Pessoas Físicas e Jurídicas
-- **💻 Gestão de Equipamentos:** Catálogo de equipamentos com controle de estado
-- **📝 Contratos de Locação:** Sistema completo de acompanhamento de contratos com alertas de vencimento
-- **📊 Dashboard Inteligente:** Visão geral com estatísticas e alertas em tempo real
-- **🎨 Interface Moderna:** Design responsivo e intuitivo com animações
+- **📋 Controle de Clientes:** Cadastro completo de Pessoas Físicas e Jurídicas com mascaramento de dados sensíveis
+- **💻 Gestão de Equipamentos:** Catálogo de equipamentos com controle de disponibilidade
+- **📝 Contratos de Locação:** Sistema completo com seletor inteligente de equipamentos e alertas de vencimento
+- **📊 Dashboard com Gráficos:** Visão geral com estatísticas, gráficos interativos e alertas em tempo real
+- **📄 Exportação em PDF:** Relatórios de contratos exportáveis diretamente do navegador
+- **🔍 Filtros e Paginação:** Busca avançada e paginação em todas as listagens
+- **📱 Interface Responsiva:** Menu sanduíche no mobile e sidebar recolhível no desktop
 
 ## 🔑 Níveis de Permissão
 
@@ -35,13 +37,15 @@ Sistema completo de gestão de locação de equipamentos de informática com **c
 - **React Router 7.6.2** - Navegação entre páginas
 - **Bootstrap 5** - Framework CSS
 - **Axios** - Cliente HTTP
+- **Recharts** - Gráficos interativos no Dashboard
+- **jsPDF + jspdf-autotable** - Geração de relatórios PDF no navegador
 
 ### Backend
 - **Node.js** - Ambiente de execução
 - **Express** - Framework web
 - **MySQL 2** - Driver de banco de dados
-- **JWT (jsonwebtoken)** - Autenticação
-- **bcrypt** - Hash de senhas (preparado)
+- **JWT (jsonwebtoken)** - Autenticação baseada em tokens
+- **bcrypt** - Hash seguro de senhas
 - **dotenv** - Variáveis de ambiente
 - **cors** - Controle de CORS
 
@@ -56,14 +60,7 @@ Sistema completo de gestão de locação de equipamentos de informática com **c
 ### 1. 🗄️ Configuração do Banco de Dados
 
 ```bash
-# Acesse o MySQL
-mysql -u root -p
-
-# Crie o banco e as tabelas
-source backend/database.sql
-
-# Crie os usuários de teste (admin, editor, viewer)
-source backend/add_usuarios.sql
+mysql -u root -p < backend/database.sql
 ```
 
 ### 2. 🔧 Configuração do Backend
@@ -109,7 +106,7 @@ npm start
 
 ## 🔐 Credenciais de Acesso
 
-Após executar o script `add_usuarios.sql`, você terá 3 usuários de teste:
+Após executar o `database.sql`, você terá 3 usuários de teste:
 
 ### Admin
 - **Email:** `admin@locatech.com`
@@ -133,21 +130,25 @@ projeto-aplicado-3/
 ├── backend/
 │   ├── middleware/
 │   │   └── auth.js              # Middleware de autenticação e autorização
+│   ├── __tests__/
+│   │   └── auth-api.test.js     # Testes de integração da API
 │   ├── database.sql             # Schema do banco de dados
-│   ├── add_usuarios.sql         # Script de criação de usuários
+│   ├── add_usuarios.sql         # Script de criação de usuários (senhas com bcrypt)
 │   ├── server.js                # Servidor Express com endpoints
 │   └── package.json
 │
 ├── frontend/
 │   ├── src/
+│   │   ├── components/
+│   │   │   └── Pagination.js    # Componente reutilizável de paginação
 │   │   ├── pages/
-│   │   │   ├── Dashboard/       # Página inicial com estatísticas
-│   │   │   ├── Clientes/        # CRUD de clientes
+│   │   │   ├── Dashboard/       # Página inicial com estatísticas e gráficos
+│   │   │   ├── Clientes/        # CRUD de clientes com privacidade de dados
 │   │   │   ├── Equipamentos/    # CRUD de equipamentos
-│   │   │   ├── Contratos/       # CRUD de contratos
+│   │   │   ├── Contratos/       # CRUD de contratos com export PDF
 │   │   │   ├── Usuarios/        # CRUD de usuários (apenas admin)
-│   │   │   └── Login/           # Tela de login
-│   │   ├── App.js               # Rotas e autenticação
+│   │   │   └── Login/           # Tela de login com toggle de senha
+│   │   ├── App.js               # Rotas, sidebar e navbar responsivos
 │   │   ├── App.css              # Estilos globais
 │   │   └── index.js
 │   └── package.json
@@ -159,37 +160,54 @@ projeto-aplicado-3/
 ## 🎯 Funcionalidades Detalhadas
 
 ### 🏠 Dashboard
-- Estatísticas em tempo real
-- Contratos ativos e próximos do vencimento
+- Estatísticas em tempo real (clientes, equipamentos, contratos, vencimentos)
+- **Gráficos interativos:**
+  - Contratos por status (ativo/inativo) — gráfico de rosca
+  - Clientes por tipo (PF/PJ) — gráfico de rosca
+  - Equipamentos por tipo — gráfico de barras
+  - Receita mensal — gráfico de área (últimos 12 meses)
 - Últimos 5 contratos cadastrados
 - Ações rápidas para cadastros
-- Alertas de vencimento
+- Alertas de vencimento nos próximos 30 dias
 
 ### 👥 Clientes
 - Cadastro de Pessoa Física (CPF) e Pessoa Jurídica (CNPJ)
 - Máscaras automáticas para telefone, CPF e CNPJ
-- Busca por nome, CPF/CNPJ ou telefone
+- **Privacidade de dados:** CPF/CNPJ mascarado por padrão (`***.456.789-**`) com botão de revelar por linha
+- **Linha expansível:** telefone, e-mail e endereço ocultos até expandir a linha
+- Filtros por nome, documento, telefone, e-mail e tipo (PF/PJ)
+- Paginação com controle de itens por página (10 / 25 / 50)
 - Edição e exclusão (com permissão)
 
 ### 💻 Equipamentos
 - Cadastro completo com marca, modelo e número de série
-- Categorização por tipo
+- Categorização por tipo (Notebook, Desktop, Monitor, etc.)
 - Campo de observações
-- Sistema de busca avançada
+- Filtros por texto e tipo
+- Paginação
 
 ### 📝 Contratos
-- Vinculação de cliente e equipamento
-- Controle de datas (início e fim)
-- Valor mensal da locação
+- **Seletor inteligente de equipamento:** campo pesquisável por tipo, marca, modelo ou nº de série
+- **Controle de disponibilidade:** equipamentos já em contratos ativos não aparecem nas opções
+- Controle de datas (início e fim) e valor mensal
 - Status do contrato (ativo/inativo)
-- Edição e cancelamento (com permissão)
+- Filtros por cliente, equipamento, status e intervalo de datas
+- **Exportação em PDF:** gera relatório formatado com os contratos da listagem atual (respeita filtros ativos)
+- Paginação
 
 ### 🔐 Usuários (Apenas Admin)
 - Criação de novos usuários
-- Definição de permissões (Admin/Editor/Viewer)
+- Definição de permissões (Admin / Editor / Viewer)
 - Ativação/desativação de contas
-- Alteração de senhas
+- Alteração de senhas (hash bcrypt automático)
 - Proteção contra auto-exclusão
+- Filtros por nome, e-mail, permissão e status
+- Paginação
+
+### 📱 Navegação Responsiva
+- **Mobile:** botão hambúrguer (☰) na navbar abre/fecha a sidebar como overlay com backdrop
+- **Desktop:** botão `‹‹` / `››` recolhe a sidebar para 64px (apenas ícones) ou expande para largura completa
+- Sidebar fecha automaticamente ao navegar para outra página no mobile
 
 ## 🛠️ API Endpoints
 
@@ -228,25 +246,40 @@ projeto-aplicado-3/
 
 ## 🔒 Segurança
 
+- **bcrypt:** Senhas armazenadas com hash seguro (salt rounds = 10)
 - **JWT Token:** Autenticação baseada em tokens com validade de 8 horas
 - **Middleware de Autorização:** Verifica permissões em cada endpoint
 - **Proteção de Rotas:** Frontend redireciona usuários não autenticados
 - **Axios Interceptor:** Adiciona token automaticamente em todas as requisições
 - **Validação de Dados:** Backend valida todos os inputs antes de processar
 
-## 📚 Documentação Adicional
+## 🧪 Testes Automatizados
 
-Para mais detalhes sobre o sistema de autenticação e permissões, consulte:
-- [AUTENTICACAO.md](./AUTENTICACAO.md) - Guia completo do sistema de auth
+Testes automatizados no backend validam os fluxos de segurança e acesso:
 
-## 🎨 Interface do Usuário
+- Login com JWT
+- Validação de token
+- Controle de acesso por perfil
+- Permissão para visualizar dados
+- Bloqueio de rotas administrativas para usuários sem permissão
 
-- Design moderno com gradientes e animações
-- Badges coloridos para identificar roles
-- Botões aparecem/desaparecem baseado em permissões
-- Menu lateral com ícones intuitivos
-- Navbar com informações do usuário logado
-- Feedback visual para todas as ações
+### Como executar
+
+No diretório `backend`:
+
+```bash
+npm install
+npm test
+```
+
+### Cenários cobertos
+
+- `POST /auth/login` com sucesso
+- `POST /auth/login` com credenciais inválidas
+- `GET /auth/verify` sem token
+- `GET /clientes` com usuário autenticado
+- `GET /usuarios` com viewer bloqueado
+- `GET /usuarios` com admin autorizado
 
 ## 🚦 Como Testar as Permissões
 
@@ -267,37 +300,6 @@ Para mais detalhes sobre o sistema de autenticação e permissões, consulte:
    - Nenhum botão de ação disponível
    - Mensagem "Apenas visualização" nas tabelas
 
-## 📝 Próximas Melhorias
-
-- [ ] Implementar bcrypt para hash de senhas
-- [ ] Adicionar paginação nas listagens
-- [ ] Sistema de filtros avançados
-- [ ] Relatórios em PDF
-- [ ] Gráficos no Dashboard
-- [ ] Sistema de notificações por email
-- [ ] Logs de auditoria
-- [ ] Autenticação de dois fatores (2FA)
-
-## 👨‍💻 Desenvolvimento
-
-E o backend com o `server.js` que inclui todos os GET, POST, DELETE, query necessários para o CRUD, como também a conexão com o banco de dados SQL.
-
-## API Endpoints
-
-Alguns exemplos de funções já disponíveis do `server.js` são:
-
-- **GET `/clientes`** - Lista todos os clientes, utilizado para selecionar um cliente na criação de um contrato
-- **POST `/clientes`** - Registra um novo cliente
-- **GET `/equipamento`** - Lista todos os equipamentos, utilizado para selecionar um equipamento na criação de um contrato
-- **POST `/equipamento`** - Registra um novo equipamento
-- **POST `/contrato`** - Cria um novo contrato
-- **GET `/listarcontratos`** - Pesquisa por contratos utilizando parâmetros, utilizado na busca de contratos por características
-- **GET `/contrato/:id`** - Coleta as informações do equipamento para a edição
-- **PUT `/contrato/:id`** - Atualiza os dados do contrato conforme a edição
-- **DELETE `/listarcontratos/:id`** - Apaga o contrato selecionado
-
-## Solução de Problemas
-
 ## ⚠️ Solução de Problemas
 
 ### Erro de conexão com o banco de dados
@@ -306,7 +308,7 @@ Verifique se:
 - O MySQL está rodando
 - As credenciais no arquivo `.env` (ou no `server.js`) estão corretas
 - O banco de dados `LocaTech` foi criado
-- Os usuários de teste foram criados com `add_usuarios.sql`
+- O banco foi criado com `database.sql`
 
 ### Erro 401 Unauthorized
 
@@ -330,6 +332,12 @@ Verifique se:
 - Admin vê todos os botões
 - Editor não vê botões de deletar
 - Viewer não vê nenhum botão de ação
+
+## 📝 Próximas Melhorias
+
+- [ ] Sistema de notificações por e-mail
+- [ ] Logs de auditoria
+- [ ] Autenticação de dois fatores (2FA)
 
 ## 📄 Licença
 
