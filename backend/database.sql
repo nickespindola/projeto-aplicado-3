@@ -1,3 +1,4 @@
+-- Active: 1782072643564@@mysql-pa3-projetoaplicadotres.a.aivencloud.com@20400@LocaTech
 -- Criação do banco de dados LocaTech
 CREATE DATABASE IF NOT EXISTS LocaTech;
 USE LocaTech;
