@@ -42,7 +42,7 @@ const Equipamentos = ({ usuario }) => {
 
   const fetchEquipamentos = async () => {
     try {
-      const response = await axios.get('http://https://locatech-backend.onrender.com/equipamento');
+      const response = await axios.get('https://locatech-backend.onrender.com/equipamento');
       setEquipamentos(response.data);
     } catch (error) {
       console.error('Erro ao buscar equipamentos:', error);
@@ -58,10 +58,10 @@ const Equipamentos = ({ usuario }) => {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://https://locatech-backend.onrender.com/equipamento/${editingId}`, formData);
+        await axios.put(`https://locatech-backend.onrender.com/equipamento/${editingId}`, formData);
         alert('Equipamento atualizado com sucesso!');
       } else {
-        await axios.post('http://https://locatech-backend.onrender.com/equipamento', formData);
+        await axios.post('https://locatech-backend.onrender.com/equipamento', formData);
         alert('Equipamento cadastrado com sucesso!');
       }
       resetForm();
@@ -74,7 +74,7 @@ const Equipamentos = ({ usuario }) => {
 
   const handleEdit = async (id) => {
     try {
-      const response = await axios.get(`http://https://locatech-backend.onrender.com/equipamento/${id}`);
+      const response = await axios.get(`https://locatech-backend.onrender.com/equipamento/${id}`);
       const equip = response.data;
       setFormData({
         marca: equip.marca || '', modelo: equip.modelo || '',
@@ -93,7 +93,7 @@ const Equipamentos = ({ usuario }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este equipamento?')) {
       try {
-        await axios.delete(`http://https://locatech-backend.onrender.com/equipamento/${id}`);
+        await axios.delete(`https://locatech-backend.onrender.com/equipamento/${id}`);
         alert('Equipamento excluído com sucesso!');
         fetchEquipamentos();
       } catch (error) {

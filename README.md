@@ -85,7 +85,7 @@ npm install
 npm start
 ```
 
-✅ Backend rodando em `http://https://locatech-backend.onrender.com`
+✅ Backend rodando em `https://locatech-backend.onrender.com`
 
 ### 3. 🎨 Configuração do Frontend
 

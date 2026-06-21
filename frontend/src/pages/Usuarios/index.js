@@ -40,7 +40,7 @@ const Usuarios = ({ usuario }) => {
 
   const fetchUsuarios = async () => {
     try {
-      const response = await axios.get('http://https://locatech-backend.onrender.com/usuarios');
+      const response = await axios.get('https://locatech-backend.onrender.com/usuarios');
       setUsuarios(response.data);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -66,10 +66,10 @@ const Usuarios = ({ usuario }) => {
       if (editingId) {
         const dataToSend = { nome: formData.nome, email: formData.email, role: formData.role, ativo: formData.ativo };
         if (formData.senha) dataToSend.senha = formData.senha;
-        await axios.put(`http://https://locatech-backend.onrender.com/usuarios/${editingId}`, dataToSend);
+        await axios.put(`https://locatech-backend.onrender.com/usuarios/${editingId}`, dataToSend);
         alert('Usuário atualizado com sucesso!');
       } else {
-        await axios.post('http://https://locatech-backend.onrender.com/usuarios', formData);
+        await axios.post('https://locatech-backend.onrender.com/usuarios', formData);
         alert('Usuário criado com sucesso!');
       }
       resetForm();
@@ -82,7 +82,7 @@ const Usuarios = ({ usuario }) => {
 
   const handleEdit = async (id) => {
     try {
-      const response = await axios.get(`http://https://locatech-backend.onrender.com/usuarios/${id}`);
+      const response = await axios.get(`https://locatech-backend.onrender.com/usuarios/${id}`);
       const user = response.data;
       setFormData({ nome: user.nome, email: user.email, senha: '', role: user.role, ativo: user.ativo });
       setEditingId(id);
@@ -97,7 +97,7 @@ const Usuarios = ({ usuario }) => {
     if (id === usuario.id) { alert('Você não pode deletar seu próprio usuário!'); return; }
     if (!window.confirm('Tem certeza que deseja excluir este usuário?')) return;
     try {
-      await axios.delete(`http://https://locatech-backend.onrender.com/usuarios/${id}`);
+      await axios.delete(`https://locatech-backend.onrender.com/usuarios/${id}`);
       alert('Usuário excluído com sucesso!');
       fetchUsuarios();
     } catch (error) {

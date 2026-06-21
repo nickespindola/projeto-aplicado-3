@@ -65,7 +65,7 @@ describe('Login', () => {
       role: 'admin',
     });
     expect(axios.post).toHaveBeenCalledWith(
-      'http://https://locatech-backend.onrender.com/auth/login',
+      'https://locatech-backend.onrender.com/auth/login',
       expect.objectContaining({
         email: 'admin@locatech.com',
         senha: 'admin123',

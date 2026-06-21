@@ -158,7 +158,7 @@ const Contratos = ({ usuario }) => {
     setEnviandoEmail(true);
     setEmailResult(null);
     try {
-      const res = await axios.post('http://https://locatech-backend.onrender.com/contratos/notificar-vencimento', { dias: 30 });
+      const res = await axios.post('https://locatech-backend.onrender.com/contratos/notificar-vencimento', { dias: 30 });
       setEmailResult({ ok: true, ...res.data });
     } catch (err) {
       setEmailResult({ ok: false, error: err.response?.data?.error || err.message });
@@ -180,7 +180,7 @@ const Contratos = ({ usuario }) => {
 
   const fetchContratos = async () => {
     try {
-      const response = await axios.get('http://https://locatech-backend.onrender.com/contrato');
+      const response = await axios.get('https://locatech-backend.onrender.com/contrato');
       setContratos(response.data);
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
@@ -189,7 +189,7 @@ const Contratos = ({ usuario }) => {
 
   const fetchClientes = async () => {
     try {
-      const response = await axios.get('http://https://locatech-backend.onrender.com/clientes');
+      const response = await axios.get('https://locatech-backend.onrender.com/clientes');
       setClientes(response.data);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
@@ -198,7 +198,7 @@ const Contratos = ({ usuario }) => {
 
   const fetchEquipamentos = async () => {
     try {
-      const response = await axios.get('http://https://locatech-backend.onrender.com/equipamento');
+      const response = await axios.get('https://locatech-backend.onrender.com/equipamento');
       setEquipamentos(response.data);
     } catch (error) {
       console.error('Erro ao buscar equipamentos:', error);
@@ -218,10 +218,10 @@ const Contratos = ({ usuario }) => {
     }
     try {
       if (editingId) {
-        await axios.put(`http://https://locatech-backend.onrender.com/contrato/${editingId}`, formData);
+        await axios.put(`https://locatech-backend.onrender.com/contrato/${editingId}`, formData);
         alert('Contrato atualizado com sucesso!');
       } else {
-        await axios.post('http://https://locatech-backend.onrender.com/contrato', formData);
+        await axios.post('https://locatech-backend.onrender.com/contrato', formData);
         alert('Contrato cadastrado com sucesso!');
       }
       resetForm();
@@ -234,7 +234,7 @@ const Contratos = ({ usuario }) => {
 
   const handleEdit = async (id) => {
     try {
-      const response = await axios.get(`http://https://locatech-backend.onrender.com/contrato/${id}`);
+      const response = await axios.get(`https://locatech-backend.onrender.com/contrato/${id}`);
       const contrato = response.data;
       setFormData({
         cliente_id: contrato.cliente_id || '',
@@ -256,7 +256,7 @@ const Contratos = ({ usuario }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este contrato?')) {
       try {
-        await axios.delete(`http://https://locatech-backend.onrender.com/contrato/${id}`);
+        await axios.delete(`https://locatech-backend.onrender.com/contrato/${id}`);
         alert('Contrato excluído com sucesso!');
         fetchContratos();
       } catch (error) {

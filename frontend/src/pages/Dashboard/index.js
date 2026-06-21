@@ -85,7 +85,7 @@ const Dashboard = () => {
     setEnviandoEmail(true);
     setEmailResult(null);
     try {
-      const res = await axios.post('http://https://locatech-backend.onrender.com/contratos/notificar-vencimento', { dias: 30 });
+      const res = await axios.post('https://locatech-backend.onrender.com/contratos/notificar-vencimento', { dias: 30 });
       setEmailResult({ ok: true, ...res.data });
     } catch (err) {
       setEmailResult({ ok: false, error: err.response?.data?.error || err.message });
@@ -100,9 +100,9 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const [clientesRes, equipamentosRes, contratosRes] = await Promise.all([
-        axios.get('http://https://locatech-backend.onrender.com/clientes'),
-        axios.get('http://https://locatech-backend.onrender.com/equipamento'),
-        axios.get('http://https://locatech-backend.onrender.com/contrato')
+        axios.get('https://locatech-backend.onrender.com/clientes'),
+        axios.get('https://locatech-backend.onrender.com/equipamento'),
+        axios.get('https://locatech-backend.onrender.com/contrato')
       ]);
 
       const contratos = contratosRes.data;
