@@ -60,14 +60,7 @@ Sistema completo de gestão de locação de equipamentos de informática com **c
 ### 1. 🗄️ Configuração do Banco de Dados
 
 ```bash
-# Acesse o MySQL
-mysql -u root -p
-
-# Crie o banco e as tabelas
-source backend/database.sql
-
-# Crie os usuários de teste (admin, editor, viewer)
-source backend/add_usuarios.sql
+mysql -u root -p < backend/database.sql
 ```
 
 ### 2. 🔧 Configuração do Backend
@@ -113,7 +106,7 @@ npm start
 
 ## 🔐 Credenciais de Acesso
 
-Após executar o script `add_usuarios.sql`, você terá 3 usuários de teste:
+Após executar o `database.sql`, você terá 3 usuários de teste:
 
 ### Admin
 - **Email:** `admin@locatech.com`
@@ -315,7 +308,7 @@ Verifique se:
 - O MySQL está rodando
 - As credenciais no arquivo `.env` (ou no `server.js`) estão corretas
 - O banco de dados `LocaTech` foi criado
-- Os usuários de teste foram criados com `add_usuarios.sql`
+- O banco foi criado com `database.sql`
 
 ### Erro 401 Unauthorized
 
