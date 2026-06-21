@@ -27,7 +27,7 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8081/auth/login', formData);
+      const response = await axios.post('http://https://locatech-backend.onrender.com/auth/login', formData);
 
       // Salvar token e dados do usuário
       localStorage.setItem('token', response.data.token);

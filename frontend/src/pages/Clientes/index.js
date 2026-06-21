@@ -109,7 +109,7 @@ const Clientes = ({ usuario }) => {
 
   const fetchClientes = async () => {
     try {
-      const response = await axios.get('http://localhost:8081/clientes');
+      const response = await axios.get('http://https://locatech-backend.onrender.com/clientes');
       setClientes(response.data);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
@@ -237,10 +237,10 @@ const Clientes = ({ usuario }) => {
     };
     try {
       if (editingId) {
-        await axios.put(`http://localhost:8081/clientes/${editingId}`, dataToSend);
+        await axios.put(`http://https://locatech-backend.onrender.com/clientes/${editingId}`, dataToSend);
         alert('Cliente atualizado com sucesso!');
       } else {
-        await axios.post('http://localhost:8081/clientes', dataToSend);
+        await axios.post('http://https://locatech-backend.onrender.com/clientes', dataToSend);
         alert('Cliente cadastrado com sucesso!');
       }
       resetForm();
@@ -253,7 +253,7 @@ const Clientes = ({ usuario }) => {
 
   const handleEdit = async (id) => {
     try {
-      const response = await axios.get(`http://localhost:8081/clientes/${id}`);
+      const response = await axios.get(`http://https://locatech-backend.onrender.com/clientes/${id}`);
       const c = response.data;
       const tipoExibicao = c.tipo_cliente === 'PF' ? 'Pessoa Física' :
         c.tipo_cliente === 'PJ' ? 'Pessoa Jurídica' : c.tipo_cliente;
@@ -283,7 +283,7 @@ const Clientes = ({ usuario }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
       try {
-        await axios.delete(`http://localhost:8081/clientes/${id}`);
+        await axios.delete(`http://https://locatech-backend.onrender.com/clientes/${id}`);
         alert('Cliente excluído com sucesso!');
         fetchClientes();
       } catch (error) {

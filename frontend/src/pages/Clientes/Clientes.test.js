@@ -33,7 +33,7 @@ describe('Testes do Componente Clientes', () => {
 
   it('CT01: Deve renderizar a listagem de clientes retornados da API', async () => {
     // Simula a resposta de sucesso da API
-    mock.onGet('http://localhost:8081/clientes').reply(200, mockClientes);
+    mock.onGet('http://https://locatech-backend.onrender.com/clientes').reply(200, mockClientes);
 
     // Renderiza o componente com um usuário Admin
     render(<Clientes usuario={{ role: 'admin' }} />);
@@ -51,8 +51,8 @@ describe('Testes do Componente Clientes', () => {
   // CT02: Submissão de formulário
 
   it('CT02: Deve permitir preencher o formulário e enviar um novo cadastro (POST)', async () => {
-    mock.onGet('http://localhost:8081/clientes').reply(200, []);
-    mock.onPost('http://localhost:8081/clientes').reply(201); // Simula criação
+    mock.onGet('http://https://locatech-backend.onrender.com/clientes').reply(200, []);
+    mock.onPost('http://https://locatech-backend.onrender.com/clientes').reply(201); // Simula criação
 
     render(<Clientes usuario={{ role: 'admin' }} />);
 
@@ -103,7 +103,7 @@ describe('Testes do Componente Clientes', () => {
   // CT03: Proteção de interface (Role Viewer)
 
   it('CT03: Deve ocultar botões de edição/exclusão se o usuário for Viewer', async () => {
-    mock.onGet('http://localhost:8081/clientes').reply(200, mockClientes);
+    mock.onGet('http://https://locatech-backend.onrender.com/clientes').reply(200, mockClientes);
 
     // ATENÇÃO: Passando o role como 'viewer'
     render(<Clientes usuario={{ role: 'viewer' }} />);
