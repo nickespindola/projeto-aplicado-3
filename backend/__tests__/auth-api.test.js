@@ -17,7 +17,7 @@ jest.mock('mysql2', () => ({
 const app = require('../server');
 
 // Hash pré-computado de 'admin123' para uso nos mocks
-const SENHA_HASH = '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG';
+const SENHA_HASH = '$2b$10$F0PI98xpfgMUlc1lUkDHkOLZpaSy0JPYg0U/L0.xX06zoheUc0Js2';
 
 const adminUser = {
   id: 1,

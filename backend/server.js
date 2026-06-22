@@ -850,3 +850,8 @@ if (require.main === module) {
 
 module.exports = app;
 module.exports.db = db;
+
+// CONFIGURACAO DO PING PARA MANTER O SERVER ACORDADO (UptimeRobot)
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong');
+});

@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS USUARIO (
 
 -- Inserir usuários de teste (senha para todos: admin123)
 INSERT IGNORE INTO USUARIO (nome, email, senha, role) VALUES
-('Administrador', 'admin@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'admin'),
-('Editor Teste', 'editor@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'editor'),
-('Visualizador', 'viewer@locatech.com', '$2b$10$tCvDxj6didbQBunOcPYLXe.vGwSH7un/RuJfcVK5YgcORYTwxehbG', 'viewer');
+('Administrador', 'admin@locatech.com', '$2b$10$F0PI98xpfgMUlc1lUkDHkOLZpaSy0JPYg0U/L0.xX06zoheUc0Js2', 'admin'),
+('Editor Teste', 'editor@locatech.com', '$2b$10$F0PI98xpfgMUlc1lUkDHkOLZpaSy0JPYg0U/L0.xX06zoheUc0Js2', 'editor'),
+('Visualizador', 'viewer@locatech.com', '$2b$10$F0PI98xpfgMUlc1lUkDHkOLZpaSy0JPYg0U/L0.xX06zoheUc0Js2', 'viewer');
+
+
+
+
